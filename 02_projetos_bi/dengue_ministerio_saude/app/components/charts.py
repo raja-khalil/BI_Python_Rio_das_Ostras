@@ -16,7 +16,7 @@ def render_time_series_placeholder() -> None:
         }
     )
     fig = px.line(sample, x="periodo", y="casos", markers=True, title="Evolucao de Casos")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 def render_comparative_placeholder() -> None:
@@ -28,4 +28,4 @@ def render_comparative_placeholder() -> None:
         }
     )
     fig = px.bar(sample, x="grupo", y="casos", title="Comparativo de Periodos")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")

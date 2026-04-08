@@ -96,7 +96,7 @@ def iniciar_execucao(context: PipelineContext, execution_mode: str) -> str:
             run_id, pipeline_name, data_source, execution_mode, started_at, status
         )
         VALUES (
-            :run_id::uuid, :pipeline_name, :data_source, :execution_mode, :started_at, :status
+            CAST(:run_id AS UUID), :pipeline_name, :data_source, :execution_mode, :started_at, :status
         )
         """
     )
@@ -149,7 +149,7 @@ def finalizar_execucao(
             status = :status,
             rows_loaded = :rows_loaded,
             message = :message
-        WHERE run_id = :run_id::uuid
+        WHERE run_id = CAST(:run_id AS UUID)
         """
     )
 

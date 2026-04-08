@@ -101,6 +101,40 @@ dengue_ministerio_saude/
    streamlit run app/main.py
    ```
 
+## Downloader do Portal SUS
+- Script: `run_downloader.py`
+- Fonte: dataset `Sinan/Dengue` no portal de dados abertos.
+- Destino dos arquivos:
+  - JSON: `data/raw/json/portal_sus/`
+  - CSV: `data/raw/csv/portal_sus/`
+  - XML: `data/raw/xml/portal_sus/`
+- Arquivos `.zip` podem ser extraidos automaticamente para `extracted/<ano>/`.
+
+### Execucao unica
+```bash
+python run_downloader.py --formats json,csv,xml --year-start 2000 --year-end 2026 --extract-zip
+```
+
+### Busca periodica por atualizacoes
+```bash
+python run_downloader.py --periodic --interval-minutes 60 --formats json,csv,xml --year-start 2000 --year-end 2026 --extract-zip
+```
+
+O downloader usa `metadata_modified` do portal para evitar re-download de arquivos sem alteracao.
+Por padrao, o `.zip` e removido apos extracao (`PORTAL_KEEP_ZIP=false`).
+
+## Backfill de JSON extraido (sem estourar memoria)
+- Script: `run_json_backfill.py`
+- Leitura streaming por chunks com `ijson`.
+- Recomendado para arquivos grandes (ex.: `DENGBR25.json`).
+
+Exemplo:
+```bash
+python run_json_backfill.py --year-start 2000 --year-end 2026 --chunk-size 100000
+```
+
+Por padrao, o script remove no banco os registros do ano antes de recarregar.
+
 ## Operacao de producao
 - `PIPELINE_MODE=historical`: executa carga historica completa por lotes de anos.
 - `PIPELINE_MODE=incremental`: executa carga incremental diaria com base em watermark no PostgreSQL.

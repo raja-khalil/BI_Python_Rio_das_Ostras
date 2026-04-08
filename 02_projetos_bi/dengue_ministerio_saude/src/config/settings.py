@@ -65,7 +65,7 @@ class Settings:
 def get_settings() -> Settings:
     """Carrega variaveis de ambiente e retorna configuracao unica."""
     project_root = _find_project_root()
-    load_dotenv(project_root / ".env")
+    load_dotenv(project_root / ".env", override=False)
 
     data_dir = project_root / "data"
 

@@ -19,20 +19,26 @@ def carregar_dataframe_postgres(
     table_name: str,
     schema: str,
     if_exists: IfExistsMode = "append",
-    chunksize: int = 5_000,
+    chunksize: int = 1_000,
 ) -> None:
-    """Carrega DataFrame em tabela PostgreSQL com parametros reutilizaveis."""
+    """Carrega DataFrame em tabela PostgreSQL com parametros reutilizaveis.
+
+    Usa executemany (method=None) para evitar SQL gigante com milhares de placeholders
+    que pode falhar em lotes muito grandes no PostgreSQL.
+    """
     if df.empty:
         return
 
     engine = get_engine()
-    df.to_sql(
+    # Garante nulos Python para evitar problemas de bind com <NA> do pandas.
+    df_to_load = df.where(pd.notna(df), None)
+    df_to_load.to_sql(
         name=table_name,
         con=engine,
         schema=schema,
         if_exists=if_exists,
         index=False,
-        method="multi",
+        method=None,
         chunksize=chunksize,
     )
 

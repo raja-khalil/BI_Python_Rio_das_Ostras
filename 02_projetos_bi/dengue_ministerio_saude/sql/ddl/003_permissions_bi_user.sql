@@ -1,0 +1,13 @@
+-- Rode conectado como superusuario (ex.: postgres)
+-- Ajuste o nome do role caso nao seja "bi_user".
+
+GRANT USAGE ON SCHEMA saude TO bi_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA saude TO bi_user;
+GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA saude TO bi_user;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA saude
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO bi_user;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA saude
+GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO bi_user;
+
