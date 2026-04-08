@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# IDE / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+
+# Logs and local configs
+*.log
+.env
+.env.*
+!.env.example
+
+# Data lake artifacts
+02_projetos_bi/**/data/raw/**
+02_projetos_bi/**/data/staging/**
+02_projetos_bi/**/data/processed/**
+02_projetos_bi/**/data/external/**
+
+# Streamlit
+.streamlit/

@@ -1,0 +1,19 @@
+Metadata-Version: 2.4
+Name: dengue-ministerio-saude-bi
+Version: 0.1.0
+Summary: Base padronizada de BI para dengue em Rio das Ostras.
+Requires-Python: >=3.12
+Requires-Dist: pandas>=2.2.0
+Requires-Dist: numpy>=1.26.0
+Requires-Dist: pyarrow>=15.0.0
+Requires-Dist: requests>=2.32.0
+Requires-Dist: lxml>=5.2.0
+Requires-Dist: SQLAlchemy>=2.0.0
+Requires-Dist: psycopg[binary]>=3.1.0
+Requires-Dist: streamlit>=1.40.0
+Requires-Dist: plotly>=5.24.0
+Requires-Dist: python-dotenv>=1.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0.0; extra == "dev"
+Requires-Dist: black>=24.0.0; extra == "dev"
+Requires-Dist: ruff>=0.6.0; extra == "dev"
