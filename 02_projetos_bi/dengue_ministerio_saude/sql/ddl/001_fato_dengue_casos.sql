@@ -8,6 +8,13 @@ CREATE TABLE IF NOT EXISTS saude.fato_dengue_casos (
     semana_epidemiologica INTEGER,
     classificacao_final VARCHAR(80),
     evolucao_caso VARCHAR(80),
+    cs_sexo VARCHAR(1),
+    nu_idade_n VARCHAR(8),
+    cs_gestant VARCHAR(2),
+    cs_raca VARCHAR(2),
+    cs_escol_n VARCHAR(4),
+    id_unidade VARCHAR(20),
+    hospitaliz VARCHAR(2),
     data_carga TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -36,5 +36,12 @@ def preparar_fato_dengue(df: pd.DataFrame) -> pd.DataFrame:
     output["semana_epidemiologica"] = _to_int(df.get("sem_not", pd.Series(index=df.index)))
     output["classificacao_final"] = df.get("classi_fin", pd.Series(index=df.index)).astype("string")
     output["evolucao_caso"] = df.get("evolucao", pd.Series(index=df.index)).astype("string")
+    output["cs_sexo"] = df.get("cs_sexo", pd.Series(index=df.index)).astype("string").str[:1]
+    output["nu_idade_n"] = df.get("nu_idade_n", pd.Series(index=df.index)).astype("string").str[:8]
+    output["cs_gestant"] = df.get("cs_gestant", pd.Series(index=df.index)).astype("string").str[:2]
+    output["cs_raca"] = df.get("cs_raca", pd.Series(index=df.index)).astype("string").str[:2]
+    output["cs_escol_n"] = df.get("cs_escol_n", pd.Series(index=df.index)).astype("string").str[:4]
+    output["id_unidade"] = df.get("id_unidade", pd.Series(index=df.index)).astype("string").str[:20]
+    output["hospitaliz"] = df.get("hospitaliz", pd.Series(index=df.index)).astype("string").str[:2]
 
     return output

@@ -7,6 +7,7 @@ from datetime import date
 from pathlib import Path
 
 from src.banco.loaders import carregar_dataframe_postgres, deletar_por_intervalo_data
+from src.banco.schema import garantir_colunas_fato_dengue
 from src.config.settings import get_settings
 from src.ingestao.reader_json_stream import iter_json_chunks
 from src.transformacao.cleaning import pipeline_limpeza_padrao
@@ -56,6 +57,7 @@ def main() -> None:
     settings = get_settings()
 
     source_base = settings.raw_dir / "json" / "portal_sus" / "extracted"
+    garantir_colunas_fato_dengue(schema=settings.db_schema, table_name=TARGET_TABLE)
     files = _list_json_files(source_base, args.year_start, args.year_end)
     if not files:
         logger.warning("Nenhum arquivo JSON encontrado em %s", source_base)

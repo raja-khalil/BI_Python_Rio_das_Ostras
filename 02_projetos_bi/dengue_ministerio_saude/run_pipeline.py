@@ -12,6 +12,7 @@ from src.banco.loaders import (
     deletar_por_intervalo_data,
     truncar_tabela,
 )
+from src.banco.schema import garantir_colunas_fato_dengue
 from src.banco.metadata import (
     PipelineContext,
     finalizar_execucao,
@@ -186,6 +187,7 @@ def main() -> None:
     last_success_date: date | None = None
 
     try:
+        garantir_colunas_fato_dengue(schema=settings.db_schema, table_name=TARGET_TABLE)
         orchestrator = IngestionOrchestrator(settings=settings)
 
         if execution_mode == "historical":

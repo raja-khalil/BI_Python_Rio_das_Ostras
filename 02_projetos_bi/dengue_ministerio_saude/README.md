@@ -3,6 +3,14 @@
 ## Objetivo
 Estrutura base padronizada para projetos de BI do municipio de Rio das Ostras, iniciando pelo tema dengue com fontes do Ministerio da Saude.
 
+## Regra de design dos paineis
+- O **Painel 1 (Situacao Geral)** e a referencia visual oficial do projeto.
+- Todo novo painel deve seguir o mesmo padrao:
+  - cards premium no topo (mesmo componente/estilo);
+  - proporcao de layout em blocos (cards -> graficos lado a lado -> tabela/lista);
+  - mesma hierarquia tipografica, espacamento e paleta.
+- Alteracoes visuais em paineis secundarios devem manter consistencia com o Painel 1.
+
 ## Escopo inicial
 - Ingestao de dados via API, JSON, CSV e XML
 - Organizacao de dados em camadas (`raw`, `staging`, `processed`)
@@ -123,6 +131,43 @@ python run_downloader.py --periodic --interval-minutes 60 --formats json,csv,xml
 O downloader usa `metadata_modified` do portal para evitar re-download de arquivos sem alteracao.
 Por padrao, o `.zip` e removido apos extracao (`PORTAL_KEEP_ZIP=false`).
 
+## Downloader CNES (base de dados)
+- Script: `run_cnes_downloader.py`
+- Fonte: `https://cnes.datasus.gov.br/pages/downloads/arquivosBaseDados.jsp`
+- Regra: baixa apenas o arquivo mais recente da lista CNES.
+- Destino dos arquivos:
+  - Zip: `data/raw/external/cnes/`
+  - Extraido: `data/raw/external/cnes/extracted/<yyyymm>/`
+- Por padrao, o zip e removido apos extracao (`CNES_KEEP_ZIP=false`).
+
+### Execucao unica
+```bash
+python run_cnes_downloader.py --extract-zip --check-interval-days 40
+```
+
+### Forcar verificacao imediata
+```bash
+python run_cnes_downloader.py --force --extract-zip --check-interval-days 40
+```
+
+### Modo periodico
+```bash
+python run_cnes_downloader.py --periodic --interval-minutes 60 --check-interval-days 40 --extract-zip
+```
+
+### Carga da dimensao CNES no banco (nomes das unidades)
+```bash
+python run_load_cnes_dim.py
+```
+
+Ou informando arquivo especifico:
+```bash
+python run_load_cnes_dim.py --file-path "C:\\caminho\\arquivo_cnes.csv"
+```
+
+Tabela criada/carregada:
+- `saude.dim_cnes_estabelecimento`
+
 ## Backfill de JSON extraido (sem estourar memoria)
 - Script: `run_json_backfill.py`
 - Leitura streaming por chunks com `ijson`.
@@ -134,6 +179,43 @@ python run_json_backfill.py --year-start 2000 --year-end 2026 --chunk-size 10000
 ```
 
 Por padrao, o script remove no banco os registros do ano antes de recarregar.
+
+## Views analiticas para BI
+Crie/atualize as views antes de abrir o dashboard:
+
+```sql
+\i sql/ddl/004_bi_views.sql
+```
+
+Views disponibilizadas:
+- `saude.vw_dengue_ano`
+- `saude.vw_dengue_mes_uf`
+- `saude.vw_dengue_municipio_ano`
+
+## Dimensao IBGE (municipios)
+- Base compartilhada recomendada:
+  `C:\Users\Administrador\Documents\BI_Python\Rio-das-Ostras\01_bases_compartilhadas\ibge\ibge_censo_2022_municipios_basico_br.csv`
+- Copia local do projeto:
+  `data/external/ibge/ibge_censo_2022_municipios_basico_br.csv`
+
+Carregar dimensao:
+```bash
+python run_load_ibge_dim.py
+```
+
+DDL da dimensao:
+- `sql/ddl/005_dim_ibge_municipio.sql`
+
+## Build da camada analitica
+Atualiza objetos analiticos (views + agregados):
+```bash
+python run_build_analytics.py
+```
+
+Objetos principais:
+- `saude.fato_dengue_analitica` (view)
+- `saude.dim_territorio` (view)
+- `saude.agg_dengue_mensal` (tabela agregada)
 
 ## Operacao de producao
 - `PIPELINE_MODE=historical`: executa carga historica completa por lotes de anos.
@@ -161,3 +243,13 @@ Por padrao, o script remove no banco os registros do ano antes de recarregar.
 
 ## Replicabilidade
 Este projeto foi estruturado para funcionar como modelo padrao para novos BIs do municipio, mantendo a mesma organizacao de camadas, modulos e boas praticas.
+
+## Identidade visual oficial (PMRO)
+- Referencia: `docs/IDENTIDADE_VISUAL_PMRO.md`
+- Logos oficiais no projeto: `assets/branding/Logo_prefeitura-RO/`
+- Copia em base compartilhada: `../01_bases_compartilhadas/identidade_visual/Logo_prefeitura-RO/`
+
+Paleta oficial aplicada no tema:
+- Azul: `#004F80`
+- Amarelo: `#DFA230`
+- Branco: `#FFFFFF`
