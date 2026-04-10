@@ -43,5 +43,50 @@ def preparar_fato_dengue(df: pd.DataFrame) -> pd.DataFrame:
     output["cs_escol_n"] = df.get("cs_escol_n", pd.Series(index=df.index)).astype("string").str[:4]
     output["id_unidade"] = df.get("id_unidade", pd.Series(index=df.index)).astype("string").str[:20]
     output["hospitaliz"] = df.get("hospitaliz", pd.Series(index=df.index)).astype("string").str[:2]
+    output["febre"] = df.get("febre", pd.Series(index=df.index)).astype("string").str[:1]
+    output["mialgia"] = df.get("mialgia", pd.Series(index=df.index)).astype("string").str[:1]
+    output["cefaleia"] = df.get("cefaleia", pd.Series(index=df.index)).astype("string").str[:1]
+    output["exantema"] = df.get("exantema", pd.Series(index=df.index)).astype("string").str[:1]
+    output["vomito"] = df.get("vomito", pd.Series(index=df.index)).astype("string").str[:1]
+    output["nausea"] = df.get("nausea", pd.Series(index=df.index)).astype("string").str[:1]
+    output["dor_costas"] = df.get("dor_costas", pd.Series(index=df.index)).astype("string").str[:1]
+    output["conjuntvit"] = df.get("conjuntvit", pd.Series(index=df.index)).astype("string").str[:1]
+    output["artrite"] = df.get("artrite", pd.Series(index=df.index)).astype("string").str[:1]
+    output["artralgia"] = df.get("artralgia", pd.Series(index=df.index)).astype("string").str[:1]
+    output["petequia_n"] = df.get("petequia_n", pd.Series(index=df.index)).astype("string").str[:1]
+    output["leucopenia"] = df.get("leucopenia", pd.Series(index=df.index)).astype("string").str[:1]
+    output["laco"] = df.get("laco", pd.Series(index=df.index)).astype("string").str[:1]
+    output["dor_retro"] = df.get("dor_retro", pd.Series(index=df.index)).astype("string").str[:1]
+    output["resul_soro"] = df.get("resul_soro", pd.Series(index=df.index)).astype("string").str[:2]
+    output["dt_chik_s1"] = _to_date(df.get("dt_chik_s1", pd.Series(index=df.index)))
+    output["dt_chik_s2"] = _to_date(df.get("dt_chik_s2", pd.Series(index=df.index)))
+    output["dt_prnt"] = _to_date(df.get("dt_prnt", pd.Series(index=df.index)))
+    output["res_chiks1"] = df.get("res_chiks1", pd.Series(index=df.index)).astype("string").str[:2]
+    output["res_chiks2"] = df.get("res_chiks2", pd.Series(index=df.index)).astype("string").str[:2]
+    output["resul_prnt"] = df.get("resul_prnt", pd.Series(index=df.index)).astype("string").str[:2]
+    output["dt_soro"] = _to_date(df.get("dt_soro", pd.Series(index=df.index)))
+    output["resul_ns1"] = df.get("resul_ns1", pd.Series(index=df.index)).astype("string").str[:2]
+    output["dt_ns1"] = _to_date(df.get("dt_ns1", pd.Series(index=df.index)))
+    output["dt_viral"] = _to_date(df.get("dt_viral", pd.Series(index=df.index)))
+    output["resul_vi_n"] = df.get("resul_vi_n", pd.Series(index=df.index)).astype("string").str[:2]
+    output["dt_pcr"] = _to_date(df.get("dt_pcr", pd.Series(index=df.index)))
+    # O nome original no JSON e "RESUL_PCR_", mas a normalizacao de colunas remove
+    # underscore no final, resultando em "resul_pcr". Aceitar ambos evita perda de carga.
+    output["resul_pcr_"] = (
+        df.get("resul_pcr", df.get("resul_pcr_", pd.Series(index=df.index)))
+        .astype("string")
+        .str[:2]
+    )
+    output["sorotipo"] = df.get("sorotipo", pd.Series(index=df.index)).astype("string").str[:2]
+    output["histopa_n"] = df.get("histopa_n", pd.Series(index=df.index)).astype("string").str[:2]
+    output["imunoh_n"] = df.get("imunoh_n", pd.Series(index=df.index)).astype("string").str[:2]
+    output["dt_interna"] = _to_date(df.get("dt_interna", pd.Series(index=df.index)))
+    output["diabetes"] = df.get("diabetes", pd.Series(index=df.index)).astype("string").str[:1]
+    output["hematolog"] = df.get("hematolog", pd.Series(index=df.index)).astype("string").str[:1]
+    output["hepatopat"] = df.get("hepatopat", pd.Series(index=df.index)).astype("string").str[:1]
+    output["renal"] = df.get("renal", pd.Series(index=df.index)).astype("string").str[:1]
+    output["hipertensa"] = df.get("hipertensa", pd.Series(index=df.index)).astype("string").str[:1]
+    output["acido_pept"] = df.get("acido_pept", pd.Series(index=df.index)).astype("string").str[:1]
+    output["auto_imune"] = df.get("auto_imune", pd.Series(index=df.index)).astype("string").str[:1]
 
     return output

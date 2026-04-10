@@ -913,6 +913,457 @@ def load_internacoes_mensal_municipio(
     return df
 
 
+@st.cache_data(show_spinner=False, ttl=300)
+def load_perfil_demografico_mensal_municipio(
+    municipio_nome: str,
+    classificacoes: tuple[str, ...] = tuple(),
+    data_inicio: str | None = None,
+) -> pd.DataFrame:
+    """Serie mensal de perfil (faixa etaria, sexo, raca) com gravidade no municipio foco."""
+    columns = load_fato_columns()
+    idade_col = _resolve_column(columns, ["nu_idade_n"])
+    sexo_col = _resolve_column(columns, ["cs_sexo", "sexo"])
+    raca_col = _resolve_column(columns, ["cs_raca"])
+    intern_col = _resolve_column(columns, ["hospitaliz", "hospitalizacao"])
+    evol_col = _resolve_column(columns, ["evolucao_caso", "evolucao"])
+
+    if idade_col is None and sexo_col is None and raca_col is None:
+        return pd.DataFrame()
+
+    idade_expr = (
+        f"""
+        CASE
+            WHEN NULLIF(TRIM(f."{idade_col}"::TEXT), '') IS NULL THEN NULL
+            WHEN f."{idade_col}"::TEXT !~ '^[0-9]+$' THEN NULL
+            WHEN LEFT(f."{idade_col}"::TEXT, 1) = '4' THEN NULLIF(SUBSTRING(f."{idade_col}"::TEXT FROM 2), '')::INTEGER
+            WHEN LEFT(f."{idade_col}"::TEXT, 1) = '3' THEN FLOOR(NULLIF(SUBSTRING(f."{idade_col}"::TEXT FROM 2), '')::NUMERIC / 12)::INTEGER
+            WHEN LEFT(f."{idade_col}"::TEXT, 1) IN ('1','2') THEN 0
+            ELSE NULL
+        END
+        """
+        if idade_col is not None
+        else "NULL::INTEGER"
+    )
+
+    faixa_expr = f"""
+        CASE
+            WHEN ({idade_expr}) IS NULL THEN 'Nao informado'
+            WHEN ({idade_expr}) <= 9 THEN '0 a 9'
+            WHEN ({idade_expr}) BETWEEN 10 AND 19 THEN '10 a 19'
+            WHEN ({idade_expr}) BETWEEN 20 AND 39 THEN '20 a 39'
+            WHEN ({idade_expr}) BETWEEN 40 AND 59 THEN '40 a 59'
+            ELSE '60+'
+        END
+    """
+
+    sexo_expr = (
+        f"COALESCE(NULLIF(TRIM(f.\"{sexo_col}\"), ''), 'NI')"
+        if sexo_col is not None
+        else "'NI'"
+    )
+    raca_expr = (
+        f"COALESCE(NULLIF(TRIM(f.\"{raca_col}\"), ''), 'NI')"
+        if raca_col is not None
+        else "'NI'"
+    )
+    intern_expr = (
+        f"CASE WHEN COALESCE(NULLIF(TRIM(f.\"{intern_col}\"), ''), 'NI') = '1' THEN 1 ELSE 0 END"
+        if intern_col is not None
+        else "0"
+    )
+    obito_expr = (
+        f"""
+        CASE
+            WHEN COALESCE(NULLIF(TRIM(f."{evol_col}"), ''), 'NI') IN ('2','3','4') THEN 1
+            WHEN UPPER(COALESCE(NULLIF(TRIM(f."{evol_col}"), ''), 'NI')) LIKE '%OBITO%' THEN 1
+            ELSE 0
+        END
+        """
+        if evol_col is not None
+        else "0"
+    )
+
+    sql = text(
+        f"""
+        SELECT
+            EXTRACT(YEAR FROM f.data_notificacao)::INTEGER AS ano,
+            DATE_TRUNC('month', f.data_notificacao)::DATE AS mes_referencia,
+            {faixa_expr} AS faixa_etaria,
+            {sexo_expr} AS sexo,
+            {raca_expr} AS raca,
+            COUNT(*)::BIGINT AS total_casos,
+            SUM({intern_expr})::BIGINT AS internacoes,
+            SUM({obito_expr})::BIGINT AS obitos
+        FROM saude.fato_dengue_casos f
+        LEFT JOIN saude.dim_ibge_municipio d
+            ON (
+                CASE
+                    WHEN f.municipio ~ '^[0-9]+$' THEN
+                        CASE
+                            WHEN LENGTH(f.municipio) >= 7 THEN SUBSTRING(f.municipio FROM 1 FOR 6)
+                            WHEN LENGTH(f.municipio) = 6 THEN f.municipio
+                            ELSE LPAD(f.municipio, 6, '0')
+                        END
+                    ELSE NULL
+                END
+            ) = d.cd_mun6
+        WHERE f.data_notificacao IS NOT NULL
+          AND (CAST(:data_inicio AS DATE) IS NULL OR f.data_notificacao >= CAST(:data_inicio AS DATE))
+          AND COALESCE(NULLIF(TRIM(f.uf), ''), 'NI') IN ('RJ', '33')
+          AND (
+              UPPER(COALESCE(d.nm_mun, TRIM(f.municipio), '')) = UPPER(:municipio_nome)
+              OR UPPER(TRIM(f.municipio)) = UPPER(:municipio_nome)
+          )
+          AND (
+              :classificacao_vazia
+              OR COALESCE(NULLIF(TRIM(f.classificacao_final), ''), 'NI') = ANY(:classificacoes)
+          )
+        GROUP BY 1, 2, 3, 4, 5
+        ORDER BY 2
+        """
+    )
+    df = pd.read_sql(
+        sql,
+        get_engine(),
+        params={
+            "municipio_nome": municipio_nome,
+            "data_inicio": data_inicio,
+            "classificacao_vazia": len(classificacoes) == 0,
+            "classificacoes": list(classificacoes),
+        },
+    )
+    if not df.empty:
+        df["mes_referencia"] = pd.to_datetime(df["mes_referencia"], errors="coerce")
+    return df
+
+
+@st.cache_data(show_spinner=False, ttl=300)
+def load_comorbidades_mensal_municipio(
+    municipio_nome: str,
+    classificacoes: tuple[str, ...] = tuple(),
+    data_inicio: str | None = None,
+) -> pd.DataFrame:
+    """Serie mensal de comorbidades no municipio foco."""
+    columns = load_fato_columns()
+    cand = {
+        "diabetes": "Diabetes",
+        "hematolog": "Doencas hematologicas",
+        "hepatopat": "Hepatopatias",
+        "renal": "Doenca renal cronica",
+        "hipertensa": "Hipertensao arterial",
+        "acido_pept": "Doenca acido-peptica",
+        "auto_imune": "Doencas autoimunes",
+    }
+    present = {col: label for col, label in cand.items() if _resolve_column(columns, [col]) is not None}
+    if not present:
+        return pd.DataFrame()
+
+    select_parts = []
+    for col in present:
+        real_col = _resolve_column(columns, [col])
+        select_parts.append(
+            f"SUM(CASE WHEN COALESCE(NULLIF(TRIM(f.\"{real_col}\"), ''), 'NI') = '1' THEN 1 ELSE 0 END)::BIGINT AS \"{col}\""
+        )
+    select_sql = ",\n            ".join(select_parts)
+
+    sql = text(
+        f"""
+        SELECT
+            EXTRACT(YEAR FROM f.data_notificacao)::INTEGER AS ano,
+            DATE_TRUNC('month', f.data_notificacao)::DATE AS mes_referencia,
+            {select_sql}
+        FROM saude.fato_dengue_casos f
+        LEFT JOIN saude.dim_ibge_municipio d
+            ON (
+                CASE
+                    WHEN f.municipio ~ '^[0-9]+$' THEN
+                        CASE
+                            WHEN LENGTH(f.municipio) >= 7 THEN SUBSTRING(f.municipio FROM 1 FOR 6)
+                            WHEN LENGTH(f.municipio) = 6 THEN f.municipio
+                            ELSE LPAD(f.municipio, 6, '0')
+                        END
+                    ELSE NULL
+                END
+            ) = d.cd_mun6
+        WHERE f.data_notificacao IS NOT NULL
+          AND (CAST(:data_inicio AS DATE) IS NULL OR f.data_notificacao >= CAST(:data_inicio AS DATE))
+          AND COALESCE(NULLIF(TRIM(f.uf), ''), 'NI') IN ('RJ', '33')
+          AND (
+              UPPER(COALESCE(d.nm_mun, TRIM(f.municipio), '')) = UPPER(:municipio_nome)
+              OR UPPER(TRIM(f.municipio)) = UPPER(:municipio_nome)
+          )
+          AND (
+              :classificacao_vazia
+              OR COALESCE(NULLIF(TRIM(f.classificacao_final), ''), 'NI') = ANY(:classificacoes)
+          )
+        GROUP BY 1, 2
+        ORDER BY 2
+        """
+    )
+    df = pd.read_sql(
+        sql,
+        get_engine(),
+        params={
+            "municipio_nome": municipio_nome,
+            "data_inicio": data_inicio,
+            "classificacao_vazia": len(classificacoes) == 0,
+            "classificacoes": list(classificacoes),
+        },
+    )
+    if df.empty:
+        return df
+    df["mes_referencia"] = pd.to_datetime(df["mes_referencia"], errors="coerce")
+    # long format
+    rows: list[dict[str, object]] = []
+    for _, row in df.iterrows():
+        for col, label in present.items():
+            rows.append(
+                {
+                    "ano": int(row["ano"]) if pd.notna(row["ano"]) else None,
+                    "mes_referencia": row["mes_referencia"],
+                    "comorbidade": label,
+                    "total_casos": int(row[col]) if pd.notna(row[col]) else 0,
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+@st.cache_data(show_spinner=False, ttl=300)
+def load_perfil_demografico_mensal_escopo(
+    escopo: str,
+    classificacoes: tuple[str, ...] = tuple(),
+    data_inicio: str | None = None,
+) -> pd.DataFrame:
+    """Serie mensal de perfil (faixa etaria, sexo, raca) para escopo RJ ou BR."""
+    columns = load_fato_columns()
+    idade_col = _resolve_column(columns, ["nu_idade_n"])
+    sexo_col = _resolve_column(columns, ["cs_sexo", "sexo"])
+    raca_col = _resolve_column(columns, ["cs_raca"])
+    intern_col = _resolve_column(columns, ["hospitaliz", "hospitalizacao"])
+    evol_col = _resolve_column(columns, ["evolucao_caso", "evolucao"])
+
+    if idade_col is None and sexo_col is None and raca_col is None:
+        return pd.DataFrame()
+
+    idade_expr = (
+        f"""
+        CASE
+            WHEN NULLIF(TRIM(f."{idade_col}"::TEXT), '') IS NULL THEN NULL
+            WHEN f."{idade_col}"::TEXT !~ '^[0-9]+$' THEN NULL
+            WHEN LEFT(f."{idade_col}"::TEXT, 1) = '4' THEN NULLIF(SUBSTRING(f."{idade_col}"::TEXT FROM 2), '')::INTEGER
+            WHEN LEFT(f."{idade_col}"::TEXT, 1) = '3' THEN FLOOR(NULLIF(SUBSTRING(f."{idade_col}"::TEXT FROM 2), '')::NUMERIC / 12)::INTEGER
+            WHEN LEFT(f."{idade_col}"::TEXT, 1) IN ('1','2') THEN 0
+            ELSE NULL
+        END
+        """
+        if idade_col is not None
+        else "NULL::INTEGER"
+    )
+    faixa_expr = f"""
+        CASE
+            WHEN ({idade_expr}) IS NULL THEN 'Nao informado'
+            WHEN ({idade_expr}) <= 9 THEN '0 a 9'
+            WHEN ({idade_expr}) BETWEEN 10 AND 19 THEN '10 a 19'
+            WHEN ({idade_expr}) BETWEEN 20 AND 39 THEN '20 a 39'
+            WHEN ({idade_expr}) BETWEEN 40 AND 59 THEN '40 a 59'
+            ELSE '60+'
+        END
+    """
+    sexo_expr = (
+        f"COALESCE(NULLIF(TRIM(f.\"{sexo_col}\"), ''), 'NI')"
+        if sexo_col is not None
+        else "'NI'"
+    )
+    raca_expr = (
+        f"COALESCE(NULLIF(TRIM(f.\"{raca_col}\"), ''), 'NI')"
+        if raca_col is not None
+        else "'NI'"
+    )
+    intern_expr = (
+        f"CASE WHEN COALESCE(NULLIF(TRIM(f.\"{intern_col}\"), ''), 'NI') = '1' THEN 1 ELSE 0 END"
+        if intern_col is not None
+        else "0"
+    )
+    obito_expr = (
+        f"""
+        CASE
+            WHEN COALESCE(NULLIF(TRIM(f."{evol_col}"), ''), 'NI') IN ('2','3','4') THEN 1
+            WHEN UPPER(COALESCE(NULLIF(TRIM(f."{evol_col}"), ''), 'NI')) LIKE '%OBITO%' THEN 1
+            ELSE 0
+        END
+        """
+        if evol_col is not None
+        else "0"
+    )
+
+    cond_escopo = "TRUE"
+    escopo_norm = (escopo or "").strip().upper()
+    if escopo_norm == "RJ":
+        cond_escopo = "COALESCE(NULLIF(TRIM(f.uf), ''), 'NI') IN ('RJ', '33')"
+
+    sql = text(
+        f"""
+        SELECT
+            EXTRACT(YEAR FROM f.data_notificacao)::INTEGER AS ano,
+            DATE_TRUNC('month', f.data_notificacao)::DATE AS mes_referencia,
+            {faixa_expr} AS faixa_etaria,
+            {sexo_expr} AS sexo,
+            {raca_expr} AS raca,
+            COUNT(*)::BIGINT AS total_casos,
+            SUM({intern_expr})::BIGINT AS internacoes,
+            SUM({obito_expr})::BIGINT AS obitos
+        FROM saude.fato_dengue_casos f
+        WHERE f.data_notificacao IS NOT NULL
+          AND (CAST(:data_inicio AS DATE) IS NULL OR f.data_notificacao >= CAST(:data_inicio AS DATE))
+          AND ({cond_escopo})
+          AND (
+              :classificacao_vazia
+              OR COALESCE(NULLIF(TRIM(f.classificacao_final), ''), 'NI') = ANY(:classificacoes)
+          )
+        GROUP BY 1, 2, 3, 4, 5
+        ORDER BY 2
+        """
+    )
+    df = pd.read_sql(
+        sql,
+        get_engine(),
+        params={
+            "data_inicio": data_inicio,
+            "classificacao_vazia": len(classificacoes) == 0,
+            "classificacoes": list(classificacoes),
+        },
+    )
+    if not df.empty:
+        df["mes_referencia"] = pd.to_datetime(df["mes_referencia"], errors="coerce")
+    return df
+
+
+@st.cache_data(show_spinner=False, ttl=300)
+def load_clinico_exames_registros_municipio(
+    municipio_nome: str,
+    classificacoes: tuple[str, ...] = tuple(),
+    data_inicio: str | None = None,
+) -> pd.DataFrame:
+    """Registros clinicos/laboratoriais no municipio foco para montagem do painel clinico."""
+    columns = load_fato_columns()
+    base_cols = ["data_notificacao", "classificacao_final", "evolucao_caso", "hospitaliz", "dt_interna"]
+    sintomas = [
+        "febre",
+        "mialgia",
+        "cefaleia",
+        "exantema",
+        "vomito",
+        "nausea",
+        "dor_costas",
+        "conjuntvit",
+        "artrite",
+        "artralgia",
+        "petequia_n",
+        "leucopenia",
+        "laco",
+        "dor_retro",
+    ]
+    comorbidades = [
+        "diabetes",
+        "hematolog",
+        "hepatopat",
+        "renal",
+        "hipertensa",
+        "acido_pept",
+        "auto_imune",
+    ]
+    exames = [
+        "dt_chik_s1",
+        "dt_chik_s2",
+        "dt_prnt",
+        "res_chiks1",
+        "res_chiks2",
+        "resul_prnt",
+        "dt_soro",
+        "resul_soro",
+        "dt_ns1",
+        "resul_ns1",
+        "dt_viral",
+        "resul_vi_n",
+        "dt_pcr",
+        "resul_pcr_",
+        "sorotipo",
+        "histopa_n",
+        "imunoh_n",
+    ]
+
+    selected = []
+    for col in base_cols + sintomas + comorbidades + exames:
+        real = _resolve_column(columns, [col])
+        if real is not None:
+            selected.append(real)
+
+    if "data_notificacao" not in [c.lower() for c in selected]:
+        return pd.DataFrame()
+
+    # Remove duplicadas mantendo ordem
+    seen = set()
+    ordered_cols = []
+    for c in selected:
+        k = c.lower()
+        if k in seen:
+            continue
+        seen.add(k)
+        ordered_cols.append(c)
+
+    select_sql = ", ".join([f'f."{c}" AS "{c.lower()}"' for c in ordered_cols])
+    sql = text(
+        f"""
+        SELECT
+            {select_sql}
+        FROM saude.fato_dengue_casos f
+        LEFT JOIN saude.dim_ibge_municipio d
+            ON (
+                CASE
+                    WHEN f.municipio ~ '^[0-9]+$' THEN
+                        CASE
+                            WHEN LENGTH(f.municipio) >= 7 THEN SUBSTRING(f.municipio FROM 1 FOR 6)
+                            WHEN LENGTH(f.municipio) = 6 THEN f.municipio
+                            ELSE LPAD(f.municipio, 6, '0')
+                        END
+                    ELSE NULL
+                END
+            ) = d.cd_mun6
+        WHERE f.data_notificacao IS NOT NULL
+          AND (CAST(:data_inicio AS DATE) IS NULL OR f.data_notificacao >= CAST(:data_inicio AS DATE))
+          AND COALESCE(NULLIF(TRIM(f.uf), ''), 'NI') IN ('RJ', '33')
+          AND (
+              UPPER(COALESCE(d.nm_mun, TRIM(f.municipio), '')) = UPPER(:municipio_nome)
+              OR UPPER(TRIM(f.municipio)) = UPPER(:municipio_nome)
+          )
+          AND (
+              :classificacao_vazia
+              OR COALESCE(NULLIF(TRIM(f.classificacao_final), ''), 'NI') = ANY(:classificacoes)
+          )
+        """
+    )
+    df = pd.read_sql(
+        sql,
+        get_engine(),
+        params={
+            "municipio_nome": municipio_nome,
+            "data_inicio": data_inicio,
+            "classificacao_vazia": len(classificacoes) == 0,
+            "classificacoes": list(classificacoes),
+        },
+    )
+    if df.empty:
+        return df
+    df["data_notificacao"] = pd.to_datetime(df["data_notificacao"], errors="coerce")
+    if "dt_interna" in df.columns:
+        df["dt_interna"] = pd.to_datetime(df["dt_interna"], errors="coerce")
+    for dt_col in ["dt_chik_s1", "dt_chik_s2", "dt_prnt", "dt_soro", "dt_ns1", "dt_viral", "dt_pcr"]:
+        if dt_col in df.columns:
+            df[dt_col] = pd.to_datetime(df[dt_col], errors="coerce")
+    df["mes_referencia"] = df["data_notificacao"].dt.to_period("M").dt.to_timestamp()
+    return df
+
+
 def get_classificacao_tuple(classificacao: Sequence[str] | None) -> tuple[str, ...]:
     """Normaliza filtro de classificacao para uso em cache."""
     return _norm_classificacoes(classificacao)

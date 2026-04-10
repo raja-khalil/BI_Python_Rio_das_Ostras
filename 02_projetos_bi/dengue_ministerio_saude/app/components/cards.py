@@ -65,6 +65,14 @@ def render_kpi_cards(card_items: list[dict[str, str | float | int | None]]) -> N
             font-weight: 800;
             margin-bottom: 4px;
         }
+        .kpi-value-text {
+            color: __BRAND_WHITE__;
+            font-size: 0.95rem;
+            line-height: 1.25;
+            font-weight: 700;
+            margin-bottom: 6px;
+            word-break: break-word;
+        }
         .kpi-delta {
             font-size: 0.80rem;
             font-weight: 700;
@@ -87,6 +95,7 @@ def render_kpi_cards(card_items: list[dict[str, str | float | int | None]]) -> N
             }
             .kpi-label { font-size: 0.83rem; }
             .kpi-value { font-size: 1.62rem; }
+            .kpi-value-text { font-size: 1.02rem; }
             .kpi-help { font-size: 0.73rem; }
         }
         @media (min-width: 1200px) {
@@ -94,6 +103,7 @@ def render_kpi_cards(card_items: list[dict[str, str | float | int | None]]) -> N
                 grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             }
             .kpi-value { font-size: 1.75rem; }
+            .kpi-value-text { font-size: 1.08rem; }
         }
         </style>
         """
@@ -109,12 +119,14 @@ def render_kpi_cards(card_items: list[dict[str, str | float | int | None]]) -> N
         delta_pct = item.get("delta_pct")
         delta_txt = str(item.get("delta_text", ""))
         delta_color = _delta_color(float(delta_pct)) if delta_pct is not None else SEMANTIC_NEUTRAL
+        value_mode = str(item.get("value_mode", "")).strip().lower()
+        value_class = "kpi-value-text" if value_mode == "text" else "kpi-value"
 
         blocks.append(
             (
                 '<div class="kpi-card">'
                 f'<div class="kpi-label">{item.get("label", "-")}</div>'
-                f'<div class="kpi-value">{item.get("value", "-")}</div>'
+                f'<div class="{value_class}">{item.get("value", "-")}</div>'
                 f'<div class="kpi-delta" style="color: {delta_color};">{delta_txt}</div>'
                 f'<div class="kpi-help">{item.get("help", "")}</div>'
                 "</div>"

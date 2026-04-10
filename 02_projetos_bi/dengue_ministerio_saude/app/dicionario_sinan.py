@@ -77,7 +77,7 @@ def get_dicionario_df() -> pd.DataFrame:
         },
         {
             "campo_tecnico": "evolucao_caso / evolucao",
-            "nome_exibicao": "Evolucao do Caso",
+            "nome_exibicao": "Evoluuo do Caso",
             "descricao": "Desfecho do caso (cura, obito etc.).",
         },
     ]

@@ -13,23 +13,26 @@ from app.business_rules import TARGET_MUNICIPIO_NOME, TARGET_UF_CODIGO, TARGET_U
 from app.components.cards import make_card, render_kpi_cards
 from app.components.charts import (
     render_classification_donut,
+    render_clinico_exames_dashboard,
+    render_perfil_epidemiologico,
     render_rankings,
-    render_sexo_chart,
     render_territorio_risco_unidades,
-    render_time_series,
-    render_unidade_notificadora_chart,
+    render_time_séries,
 )
 from app.components.filters import render_filters_sidebar
 from app.data_access import (
+    load_clinico_exames_registros_municipio,
+    load_comorbidades_mensal_municipio,
     get_classificacao_tuple,
     load_casos_ano,
     load_casos_municipio_ano_brasil_enriquecido,
     load_casos_mes_municipio,
     load_casos_mes_uf,
     load_casos_municipio_ano_rj_enriquecido,
-    load_fato_columns,
     load_internacoes_mensal_municipio,
     load_populacao_refs,
+    load_perfil_demografico_mensal_municipio,
+    load_perfil_demografico_mensal_escopo,
     load_perfil_top_municipio,
     load_semana_epidemiologica_media_municipio,
     load_sexo_municipio,
@@ -54,16 +57,21 @@ CONFIRM_CODES = {"1", "3", "4", "5", "6", "10", "11", "12"}
 SLOW_LOADING_SECONDS = 60
 
 
-def _logo_data_uri() -> str | None:
-    """Converte logo oficial para data URI (uso no overlay)."""
-    logo_path = Path("assets/branding/Logo_prefeitura-RO/Logo_PMRO_Slogan_azul.png")
-    if not logo_path.exists():
+def _image_data_uri(image_path: Path) -> str | None:
+    """Converte imagem para data URI."""
+    if not image_path.exists():
         return None
     try:
-        encoded = base64.b64encode(logo_path.read_bytes()).decode("ascii")
+        encoded = base64.b64encode(image_path.read_bytes()).decode("ascii")
         return f"data:image/png;base64,{encoded}"
     except OSError:
         return None
+
+
+def _logo_data_uri() -> str | None:
+    """Converte logo oficial para data URI (uso no overlay)."""
+    logo_path = Path("assets/branding/Logo_prefeitura-RO/Logo_PMRO_Slogan_azul.png")
+    return _image_data_uri(logo_path)
 
 
 def _start_loading_overlay(blocking: bool = True) -> dict[str, st.delta_generator.DeltaGenerator | int | float]:
@@ -181,7 +189,7 @@ def _finish_loading_overlay(loading_refs: dict[str, st.delta_generator.DeltaGene
 def _filters_signature(filtros: dict[str, object]) -> tuple:
     """Assinatura hashable dos filtros relevantes para detectar recarga por mudanca."""
     return (
-        str(filtros.get("periodo_rapido", "")),
+        str(filtros.get("período_rapido", "")),
         tuple(sorted(int(v) for v in filtros.get("anos", []) or [])),
         tuple(sorted(int(v) for v in filtros.get("meses", []) or [])),
         str(filtros.get("comparacao", "")),
@@ -189,7 +197,7 @@ def _filters_signature(filtros: dict[str, object]) -> tuple:
         str(filtros.get("estado", "")),
         str(filtros.get("municipio", "")),
         tuple(sorted(str(v) for v in filtros.get("classificacao", []) or [])),
-        bool(filtros.get("carregar_historico_completo", False)),
+        bool(filtros.get("carregar_histórico_completo", False)),
         int(filtros.get("top_n", 10) or 10),
         str(filtros.get("secao", st.session_state.get("filtro_secao", ""))),
     )
@@ -287,6 +295,37 @@ def _inject_mobile_first_styles() -> None:
             height: auto;
             display: block;
         }
+        .pmro-header-right-logos {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 0.28rem;
+            width: 100%;
+            flex-wrap: nowrap;
+            overflow: visible;
+            padding-left: 0.08rem;
+            padding-right: 0;
+            padding-bottom: 0;
+        }
+        .pmro-header-right-logo {
+            display: block;
+            width: auto;
+            height: auto;
+            max-height: 58px;
+            max-width: 42%;
+            opacity: 0.98;
+            object-fit: contain;
+            flex: 0 1 auto;
+        }
+        .pmro-header-right-logo-govtic {
+            width: auto;
+            height: auto;
+            max-height: 64px;
+            max-width: 56%;
+            filter: drop-shadow(0 2px 6px rgba(15, 47, 75, 0.16));
+            opacity: 1;
+            object-fit: contain;
+        }
         .pmro-header-title {
             margin: 0;
             line-height: 1.15;
@@ -371,6 +410,44 @@ def _inject_mobile_first_styles() -> None:
             h1 { font-size: 1.9rem; }
             h2 { font-size: 1.45rem; }
             h3 { font-size: 1.18rem; }
+            .pmro-header-right-logos {
+                justify-content: flex-start;
+                gap: 0.28rem;
+                overflow: visible;
+                padding-bottom: 0;
+            }
+            .pmro-header-right-logo {
+                max-height: 56px;
+                max-width: 42%;
+            }
+            .pmro-header-right-logo-govtic {
+                max-height: 62px;
+                max-width: 56%;
+            }
+        }
+        @media (min-width: 992px) {
+            .pmro-header-right-logos {
+                gap: 0.25rem;
+            }
+            .pmro-header-right-logo {
+                max-height: 60px;
+                max-width: 42%;
+            }
+            .pmro-header-right-logo-govtic {
+                max-height: 68px;
+                max-width: 56%;
+            }
+        }
+        @media (min-width: 1280px) {
+            .pmro-header-right-logos { gap: 0.24rem; }
+            .pmro-header-right-logo {
+                max-height: 64px;
+                max-width: 42%;
+            }
+            .pmro-header-right-logo-govtic {
+                max-height: 72px;
+                max-width: 56%;
+            }
         }
         @media (max-width: 767px) {
             div[data-testid="stVerticalBlock"] > div:has(.pmro-sticky-anchor) {
@@ -381,6 +458,20 @@ def _inject_mobile_first_styles() -> None:
             [data-testid="stSegmentedControl"] [role="radiogroup"],
             div[role="radiogroup"] {
                 width: 100%;
+            }
+            .pmro-header-right-logos {
+                justify-content: center;
+                gap: 0.2rem;
+                overflow-x: visible;
+                padding-bottom: 1px;
+            }
+            .pmro-header-right-logo {
+                max-height: 42px;
+                max-width: 44%;
+            }
+            .pmro-header-right-logo-govtic {
+                max-height: 48px;
+                max-width: 56%;
             }
         }
         @media (min-width: 1200px) {
@@ -398,16 +489,14 @@ def _inject_mobile_first_styles() -> None:
 def _render_portal_header() -> str:
     """Cabecalho institucional do painel oficial com navegacao global."""
     logo_path = Path("assets/branding/Logo_prefeitura-RO/Logo_PMRO.png")
-    logo_uri = None
-    if logo_path.exists():
-        try:
-            encoded = base64.b64encode(logo_path.read_bytes()).decode("ascii")
-            logo_uri = f"data:image/png;base64,{encoded}"
-        except OSError:
-            logo_uri = None
+    logo_uri = _image_data_uri(logo_path)
+    govtic_path = Path("assets/branding/parceiros/logo_govtic.png")
+    govtic_uri = _image_data_uri(govtic_path)
+    digital_path = Path("assets/branding/parceiros/logo_rio_das_ostras_digital.png")
+    digital_uri = _image_data_uri(digital_path)
     with st.container(border=True):
         st.markdown('<span class="pmro-sticky-anchor"></span>', unsafe_allow_html=True)
-        c1, c2 = st.columns([0.85, 4.15], vertical_alignment="center", gap="small")
+        c1, c2, c3 = st.columns([0.82, 2.88, 2.30], vertical_alignment="center", gap="small")
         with c1:
             if logo_uri:
                 st.markdown(
@@ -425,12 +514,28 @@ def _render_portal_header() -> str:
                 """
                 <div class="pmro-header-block">
                     <p class="pmro-header-title">Prefeitura Municipal de Rio das Ostras</p>
-                    <p class="pmro-header-subtitle">Secretaria Municipal de Saude | Painel Oficial de Monitoramento da Dengue</p>
+                    <p class="pmro-header-subtitle">Secretaria Municipal de Governança e Transformação Digital</p>
+                    <p class="pmro-header-subtitle"><strong>Painel Oficial de Monitoramento da Dengue</strong></p>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
             secao = _render_top_menu(show_title=False)
+        with c3:
+            logos_right: list[str] = []
+            if govtic_uri:
+                logos_right.append(
+                    f'<img src="{govtic_uri}" class="pmro-header-right-logo pmro-header-right-logo-govtic" alt="GOVTIC"/>'
+                )
+            if digital_uri:
+                logos_right.append(
+                    f'<img src="{digital_uri}" class="pmro-header-right-logo" alt="Rio das Ostras Digital"/>'
+                )
+            if logos_right:
+                st.markdown(
+                    f'<div class="pmro-header-right-logos">{"".join(logos_right)}</div>',
+                    unsafe_allow_html=True,
+                )
     return secao
 
 
@@ -454,11 +559,11 @@ def _render_portal_footer() -> None:
 def _render_top_menu(show_title: bool = True) -> str:
     """Navegacao principal em botoes no cabecalho."""
     options = [
-        "Situacao Geral",
-        "Territorio e Risco",
+        "Situação Geral",
+        "Território e Risco",
         "Perfil dos Casos",
-        "Clinico e Exames",
-        "Avaliacao",
+        "Clínico e Exames",
+        "Avaliação",
     ]
     if show_title:
         st.markdown("##### Menu")
@@ -470,7 +575,7 @@ def _render_top_menu(show_title: bool = True) -> str:
             label_visibility="collapsed",
             selection_mode="single",
         )
-        return selected or st.session_state.get("filtro_secao", "Situacao Geral")
+        return selected or st.session_state.get("filtro_secao", "Situação Geral")
     selected = st.radio(
         "Secao do painel",
         options=options,
@@ -478,7 +583,7 @@ def _render_top_menu(show_title: bool = True) -> str:
         horizontal=True,
         label_visibility="collapsed",
     )
-    return selected or st.session_state.get("filtro_secao", "Situacao Geral")
+    return selected or st.session_state.get("filtro_secao", "Situação Geral")
 
 
 def _filtrar_df(df: pd.DataFrame, anos: list[int]) -> pd.DataFrame:
@@ -494,18 +599,18 @@ def _filtrar_por_meses(df: pd.DataFrame, meses: list[int]) -> pd.DataFrame:
     return out[out["mes_referencia"].dt.month.isin(meses)]
 
 
-def _aplicar_periodo_rapido(df: pd.DataFrame, periodo_rapido: str) -> pd.DataFrame:
-    if df.empty or "mes_referencia" not in df.columns or periodo_rapido == "Personalizado (ano/mes)":
+def _aplicar_período_rapido(df: pd.DataFrame, período_rapido: str) -> pd.DataFrame:
+    if df.empty or "mes_referencia" not in df.columns or período_rapido == "Personalizado (ano/mês)":
         return df
     ref = pd.to_datetime(df["mes_referencia"]).max()
     if pd.isna(ref):
         return df
 
-    if periodo_rapido == "Ultimos 3 meses":
+    if período_rapido == "Últimos 3 meses":
         inicio = ref - pd.DateOffset(months=2)
-    elif periodo_rapido == "Ultimos 6 meses":
+    elif período_rapido == "Últimos 6 meses":
         inicio = ref - pd.DateOffset(months=5)
-    elif periodo_rapido == "Ultimos 12 meses":
+    elif período_rapido == "Últimos 12 meses":
         inicio = ref - pd.DateOffset(months=11)
     else:
         inicio = pd.Timestamp(year=ref.year, month=1, day=1)
@@ -525,27 +630,27 @@ def _sum_mes(df: pd.DataFrame, mes: pd.Period, col: str) -> int:
 
 
 def _start_date_for_fast_window(
-    periodo_rapido: str,
+    período_rapido: str,
     anos_selecionados: list[int],
-    carregar_historico_completo: bool,
+    carregar_histórico_completo: bool,
     referencia_base: pd.Timestamp | None = None,
 ) -> str | None:
     """Define janela de dados carregada conforme estrategia progressiva de cache."""
     ref_ts = pd.Timestamp(referencia_base) if referencia_base is not None and not pd.isna(referencia_base) else pd.Timestamp(date.today())
     first_day_current_month = pd.Timestamp(year=ref_ts.year, month=ref_ts.month, day=1)
-    if periodo_rapido == "Ultimos 3 meses":
+    if período_rapido == "Últimos 3 meses":
         return (first_day_current_month - pd.DateOffset(months=2)).date().isoformat()
-    if periodo_rapido == "Ultimos 6 meses":
+    if período_rapido == "Últimos 6 meses":
         return (first_day_current_month - pd.DateOffset(months=5)).date().isoformat()
-    if periodo_rapido == "Ultimos 12 meses":
+    if período_rapido == "Últimos 12 meses":
         return (first_day_current_month - pd.DateOffset(months=11)).date().isoformat()
-    if periodo_rapido == "Ano atual":
+    if período_rapido == "Ano atual":
         return date(ref_ts.year, 1, 1).isoformat()
 
-    # Personalizado: se nao houver ano selecionado, carrega apenas ultimos 5 anos por padrao.
+    # Personalizado: se no houver ano selecionado, carrega apenas uUltimos 5 anos por padrao.
     if anos_selecionados:
         return date(min(anos_selecionados), 1, 1).isoformat()
-    if carregar_historico_completo:
+    if carregar_histórico_completo:
         return None
     return date(ref_ts.year - 4, 1, 1).isoformat()
 
@@ -591,7 +696,7 @@ def _preload_next_windows(
     return True
 
 
-def _build_cards_periodo(
+def _build_cards_período(
     df_mes_municipio: pd.DataFrame,
     df_status_municipio: pd.DataFrame,
     df_internacoes_mensal: pd.DataFrame,
@@ -610,13 +715,13 @@ def _build_cards_periodo(
     letalidade = (total_obitos / total_confirmados * 100) if total_confirmados > 0 else None
 
     return [
-        make_card("Casos confirmados", total_confirmados, "Total no periodo filtrado"),
-        make_card("Casos notificados", total_notificados, "Total no periodo filtrado"),
-        make_card("Obitos", total_obitos, "Evolucao do caso = obito pelo agravo"),
-        make_card("Internacoes", total_internacoes, "Hospitalizacao = sim"),
-        make_card("Incidencia", incidencia, "Por 100 mil habitantes", absolute=False),
+        make_card("Casos confirmados", total_confirmados, "Total no período filtrado"),
+        make_card("Casos notificados", total_notificados, "Total no período filtrado"),
+        make_card("Óbitos", total_obitos, "Evolução do caso = óbito pelo agravo"),
+        make_card("Internações", total_internacoes, "Hospitalização = sim"),
+        make_card("Incidência", incidencia, "Por 100 mil habitantes", absolute=False),
         make_card("Letalidade", letalidade, "Percentual sobre casos confirmados", suffix="%", absolute=False),
-        make_card("Casos em investigacao", total_investig, "Notificados sem encerramento conclusivo"),
+        make_card("Casos em investigação", total_investig, "Notificados sem encerramento conclusivo"),
     ]
 
 
@@ -721,7 +826,7 @@ def _render_dashboard_situacao_geral(
     df_perfil_top: pd.DataFrame,
     semana_epi_media: int | None,
     comparacao: str,
-    periodo_rapido: str,
+    período_rapido: str,
     metrica_visual: str,
     municipio_foco: str,
     top_n: int,
@@ -731,9 +836,9 @@ def _render_dashboard_situacao_geral(
     pop_rj = int(pop_refs.iloc[0]["pop_rj"]) if not pop_refs.empty and pd.notna(pop_refs.iloc[0]["pop_rj"]) else None
     pop_municipio = int(pop_refs.iloc[0]["pop_municipio"]) if not pop_refs.empty and pd.notna(pop_refs.iloc[0]["pop_municipio"]) else None
 
-    st.markdown("### Situacao Geral da Dengue")
+    st.markdown("### Situação Geral da Dengue")
     render_kpi_cards(
-        _build_cards_periodo(
+        _build_cards_período(
             df_mes_municipio=df_mes_municipio,
             df_status_municipio=df_status_municipio,
             df_internacoes_mensal=df_internacoes_mensal,
@@ -759,12 +864,12 @@ def _render_dashboard_situacao_geral(
         pop_rj=pop_rj,
         pop_municipio=pop_municipio,
     )
-    render_time_series(
+    render_time_séries(
         df_mes_brasil=df_br,
         df_mes_rj=df_rj,
         df_mes_municipio=df_mun,
         comparacao=comparacao,
-        periodo_rapido=periodo_rapido,
+        período_rapido=período_rapido,
         metrica_coluna=metric_col,
         municipio_nome=municipio_foco,
     )
@@ -823,10 +928,10 @@ def _render_dashboard_situacao_geral(
                     "2": "2o trimestre",
                     "3": "3o trimestre",
                     "4": "idade gestacional ignorada",
-                    "5": "nao",
-                    "6": "nao se aplica",
+                    "5": "no",
+                    "6": "no se aplica",
                     "9": "ignorado",
-                    "NI": "nao informado",
+                    "NI": "no informado",
                 }
                 return total, gest_map.get(raw, raw)
 
@@ -838,7 +943,7 @@ def _render_dashboard_situacao_geral(
                     "4": "parda",
                     "5": "indigena",
                     "9": "ignorado",
-                    "NI": "nao informado",
+                    "NI": "no informado",
                 }
                 return total, raca_map.get(raw, raw)
 
@@ -865,9 +970,9 @@ def _render_dashboard_situacao_geral(
                     "08": "superior completa",
                     "9": "ignorado",
                     "09": "ignorado",
-                    "10": "nao se aplica",
+                    "10": "no se aplica",
                     "99": "ignorado",
-                    "NI": "nao informado",
+                    "NI": "no informado",
                 }
                 key = d if d else raw
                 return total, esc_map.get(key, raw)
@@ -881,19 +986,41 @@ def _render_dashboard_situacao_geral(
         if not df_unidade_municipio.empty:
             top_row = df_unidade_municipio.sort_values("total_casos", ascending=False).iloc[0]
             nome = str(top_row.get("unidade_nome", "")).strip() if "unidade_nome" in df_unidade_municipio.columns else ""
-            unidade_top_nome = nome if nome else "Unidade nao identificada"
+            unidade_top_nome = nome if nome else "Unidade no identificada"
             unidade_top_casos = int(top_row.get("total_casos", 0))
         if not df_sexo_municipio.empty:
-            sexo_map = {"F": "Feminino", "M": "Masculino", "I": "Ignorado", "NI": "Nao informado"}
+            sexo_map = {"F": "Feminino", "M": "Masculino", "I": "Ignorado", "NI": "Não informado"}
             top_sexo = df_sexo_municipio.sort_values("total_casos", ascending=False).iloc[0]
             sexo_raw = str(top_sexo.get("sexo", "NI")).strip().upper()
-            sexo_top_nome = sexo_map.get(sexo_raw, sexo_raw if sexo_raw else "Nao informado")
+            sexo_top_nome = sexo_map.get(sexo_raw, sexo_raw if sexo_raw else "Não informado")
             sexo_top_casos = int(top_sexo.get("total_casos", 0))
 
         idade_top_casos, idade_top_txt = _perfil_row("idade")
         gest_top_casos, gest_top_txt = _perfil_row("gestante")
         raca_top_casos, raca_top_txt = _perfil_row("raca")
         esc_top_casos, esc_top_txt = _perfil_row("escolaridade")
+
+        def _fmt_abs(v: int | float | None) -> str:
+            if v is None:
+                return "-"
+            try:
+                return f"{int(round(float(v))):,}".replace(",", ".")
+            except (TypeError, ValueError):
+                return "-"
+
+        def _build_text_focus_card(label: str, destaque: str | None, quantidade: int | float | None) -> dict[str, object]:
+            txt = str(destaque).strip() if destaque is not None else ""
+            if not txt or txt.lower() in {"nan", "none", "-"}:
+                txt = "Sem dado informado"
+            return {
+                "label": label,
+                "value": txt,
+                "value_mode": "text",
+                "delta_text": "-",
+                "delta_pct": None,
+                "help": f"Casos: {_fmt_abs(quantidade)}",
+            }
+
         render_kpi_cards(
             [
                 _build_posicao_card(df_municipio_rj_filtrado, "Estado (RJ)"),
@@ -903,20 +1030,12 @@ def _render_dashboard_situacao_geral(
                     semana_epi_media,
                     "Média da semana epidemiológica no período filtrado",
                 ),
-                make_card(
-                    "Unidade que mais notificou",
-                    unidade_top_casos,
-                    (unidade_top_nome or "Sem dado informado"),
-                ),
-                make_card(
-                    "Sexo mais notificado",
-                    sexo_top_casos,
-                    (sexo_top_nome or "Sem dado informado"),
-                ),
-                make_card("Idade mais notificada", idade_top_casos, idade_top_txt),
-                make_card("Gestante (situacao mais frequente)", gest_top_casos, gest_top_txt),
-                make_card("Raca/Cor mais notificada", raca_top_casos, raca_top_txt),
-                make_card("Escolaridade mais notificada", esc_top_casos, esc_top_txt),
+                _build_text_focus_card("Unidade que mais notificou", (unidade_top_nome or "Sem dado informado"), unidade_top_casos),
+                _build_text_focus_card("Sexo mais notificado", (sexo_top_nome or "Sem dado informado"), sexo_top_casos),
+                _build_text_focus_card("Idade mais notificada", idade_top_txt, idade_top_casos),
+                _build_text_focus_card("Gestante (situacao mais frequente)", gest_top_txt, gest_top_casos),
+                _build_text_focus_card("Raca/Cor mais notificada", raca_top_txt, raca_top_casos),
+                _build_text_focus_card("Escolaridade mais notificada", esc_top_txt, esc_top_casos),
             ]
         )
 
@@ -926,7 +1045,9 @@ def _render_dashboard_situacao_geral(
 def main() -> None:
     _inject_mobile_first_styles()
     if "filtro_secao" not in st.session_state:
-        st.session_state["filtro_secao"] = "Situacao Geral"
+        st.session_state["filtro_secao"] = "Situação Geral"
+    if "last_rendered_secao" not in st.session_state:
+        st.session_state["last_rendered_secao"] = st.session_state.get("filtro_secao", "Situação Geral")
     initial_panel_ready = bool(st.session_state.get("initial_panel_ready", False))
     last_filter_signature = st.session_state.get("last_filter_signature")
     loading = _start_loading_overlay() if not initial_panel_ready else None
@@ -939,68 +1060,83 @@ def main() -> None:
 
         secao = _render_portal_header()
         if not secao:
-            secao = "Situacao Geral"
+            secao = "Situação Geral"
+        secao_anterior = str(st.session_state.get("last_rendered_secao", secao))
+        secao_changed = bool(initial_panel_ready and secao_anterior != secao)
+        if secao_changed and not loading:
+            loading = _start_loading_overlay(blocking=True)
+            _update_loading_overlay(
+                loading,
+                step,
+                total_steps,
+                f"Abrindo painel: {secao}...",
+                started_at=started_at,
+            )
         step += 1
         _update_loading_overlay(loading, step, total_steps, "Preparando identidade visual...", started_at=started_at)
 
         df_ano_base = load_casos_ano()
         if df_ano_base.empty:
-            st.error("Nao foi possivel carregar dados analiticos. Verifique as views no schema 'saude'.")
+            st.error("Não foi possível carregar dados analíticos. Verifique as views no schema 'saude'.")
             st.stop()
         step += 1
         _update_loading_overlay(loading, step, total_steps, "Conectando base de dados...", started_at=started_at)
 
-        anos_disponiveis = sorted(df_ano_base["ano"].dropna().astype(int).tolist())
+        anos_disponíveis = sorted(df_ano_base["ano"].dropna().astype(int).tolist())
         df_mes_uf_base = load_casos_mes_uf()
-        meses_disponiveis = sorted(df_mes_uf_base["mes_referencia"].dt.month.dropna().astype(int).unique().tolist())
+        meses_disponíveis = sorted(df_mes_uf_base["mes_referencia"].dt.month.dropna().astype(int).unique().tolist())
         referencia_base = pd.to_datetime(df_mes_uf_base["mes_referencia"], errors="coerce").max()
         df_municipio_base = load_casos_municipio_ano_rj_enriquecido()
-        municipios_disponiveis = sorted(
+        municipios_disponíveis = sorted(
             [m for m in df_municipio_base["municipio_nome"].dropna().astype(str).unique().tolist() if m]
         )
         step += 1
-        _update_loading_overlay(loading, step, total_steps, "Lendo periodos disponiveis...", started_at=started_at)
+        _update_loading_overlay(loading, step, total_steps, "Lendo períodos disponíveis...", started_at=started_at)
 
         filtros = render_filters_sidebar(
-            anos_disponiveis=anos_disponiveis,
-            meses_disponiveis=meses_disponiveis,
-            municipios_disponiveis=municipios_disponiveis,
+            anos_disponíveis=anos_disponíveis,
+            meses_disponíveis=meses_disponíveis,
+            municipios_disponíveis=municipios_disponíveis,
         )
         current_signature = _filters_signature(filtros)
         filter_changed = bool(initial_panel_ready and last_filter_signature is not None and current_signature != last_filter_signature)
         if filter_changed and not loading:
             # Regra UX: sempre exibir overlay oficial (logo + card) em qualquer carregamento.
             loading = _start_loading_overlay(blocking=True)
-            _update_loading_overlay(loading, step, total_steps, "Recarregando painel com novos filtros...", started_at=started_at)
+            if secao_changed:
+                msg_reload = f"Abrindo painel: {secao}..."
+            else:
+                msg_reload = "Recarregando painel com novos filtros..."
+            _update_loading_overlay(loading, step, total_steps, msg_reload, started_at=started_at)
         step += 1
         label_filtro = "Aplicando filtros..."
-        if str(filtros.get("periodo_rapido", "")) == "Personalizado (ano/mes)":
+        if str(filtros.get("período_rapido", "")) == "Personalizado (ano/mês)":
             label_filtro = "Aplicando filtros (consulta historica sob demanda)..."
         _update_loading_overlay(loading, step, total_steps, label_filtro, started_at=started_at)
 
         comparacao = str(filtros["comparacao"])
-        periodo_rapido = str(filtros["periodo_rapido"])
+        período_rapido = str(filtros["período_rapido"])
         metrica_visual = str(filtros["metrica_visual"])
         municipio_foco = str(filtros["municipio"]) if filtros["municipio"] else TARGET_MUNICIPIO_NOME
-        anos_selecionados = filtros["anos"] if periodo_rapido == "Personalizado (ano/mes)" else []
+        anos_selecionados = filtros["anos"] if período_rapido == "Personalizado (ano/mês)" else []
         meses_selecionados = filtros["meses"]
         classificacao_tuple = get_classificacao_tuple(filtros["classificacao"])
-        carregar_historico_completo = bool(filtros["carregar_historico_completo"])
+        carregar_histórico_completo = bool(filtros["carregar_histórico_completo"])
         if not bool(filtros.get("personalizado_valido", True)):
-            st.warning("Selecione ao menos 1 ano no filtro 'Personalizado (ano/mes)'. O mes e opcional.")
+            st.warning("Selecione ao menos 1 ano no filtro 'Personalizado (ano/mês)'. O mes e opcional.")
             _render_portal_footer()
             st.session_state["last_filter_signature"] = current_signature
             return
         data_inicio = _start_date_for_fast_window(
-            periodo_rapido=periodo_rapido,
-            anos_selecionados=anos_selecionados if periodo_rapido == "Personalizado (ano/mes)" else [],
-            carregar_historico_completo=carregar_historico_completo,
+            período_rapido=período_rapido,
+            anos_selecionados=anos_selecionados if período_rapido == "Personalizado (ano/mês)" else [],
+            carregar_histórico_completo=carregar_histórico_completo,
             referencia_base=referencia_base,
         )
 
         df_mes_uf = load_casos_mes_uf(classificacoes=classificacao_tuple, data_inicio=data_inicio)
         step += 1
-        _update_loading_overlay(loading, step, total_steps, "Montando series temporais...", started_at=started_at)
+        _update_loading_overlay(loading, step, total_steps, "Montando séries temporais...", started_at=started_at)
 
         df_municipio_rj = load_casos_municipio_ano_rj_enriquecido(classificacoes=classificacao_tuple, data_inicio=data_inicio)
         df_municipio_br = load_casos_municipio_ano_brasil_enriquecido(
@@ -1063,6 +1199,31 @@ def main() -> None:
             classificacoes=classificacao_tuple,
             data_inicio=data_inicio,
         )
+        df_clinico_exames = load_clinico_exames_registros_municipio(
+            municipio_nome=municipio_foco,
+            classificacoes=classificacao_tuple,
+            data_inicio=data_inicio,
+        )
+        df_perfil_demografico_mensal = load_perfil_demografico_mensal_municipio(
+            municipio_nome=municipio_foco,
+            classificacoes=classificacao_tuple,
+            data_inicio=data_inicio,
+        )
+        df_comorbidades_mensal = load_comorbidades_mensal_municipio(
+            municipio_nome=municipio_foco,
+            classificacoes=classificacao_tuple,
+            data_inicio=data_inicio,
+        )
+        df_perfil_demografico_rj = load_perfil_demografico_mensal_escopo(
+            escopo="RJ",
+            classificacoes=classificacao_tuple,
+            data_inicio=data_inicio,
+        )
+        df_perfil_demografico_br = load_perfil_demografico_mensal_escopo(
+            escopo="BR",
+            classificacoes=classificacao_tuple,
+            data_inicio=data_inicio,
+        )
 
         df_semana = load_semana_epidemiologica_media_municipio(
             municipio_nome=municipio_foco,
@@ -1081,7 +1242,6 @@ def main() -> None:
             loading, step, total_steps, "Calculando indicadores de referencia...", started_at=started_at
         )
 
-        fato_columns = {c.lower() for c in load_fato_columns()}
         step += 1
         _update_loading_overlay(loading, step, total_steps, "Finalizando painel...", started_at=started_at)
 
@@ -1094,6 +1254,11 @@ def main() -> None:
         df_status_municipio = _filtrar_df(df_status_municipio, anos=anos_selecionados)
         df_internacoes_mensal = _filtrar_df(df_internacoes_mensal, anos=anos_selecionados)
         df_unidade_mensal = _filtrar_df(df_unidade_mensal, anos=anos_selecionados)
+        df_perfil_demografico_mensal = _filtrar_df(df_perfil_demografico_mensal, anos=anos_selecionados)
+        df_comorbidades_mensal = _filtrar_df(df_comorbidades_mensal, anos=anos_selecionados)
+        df_perfil_demografico_rj = _filtrar_df(df_perfil_demografico_rj, anos=anos_selecionados)
+        df_perfil_demografico_br = _filtrar_df(df_perfil_demografico_br, anos=anos_selecionados)
+        df_clinico_exames = _filtrar_df(df_clinico_exames, anos=anos_selecionados)
 
         df_mes_filtrado = _filtrar_por_meses(df_mes_filtrado, meses=meses_selecionados)
         df_municipio_rj_filtrado = _filtrar_por_meses(df_municipio_rj_filtrado, meses=meses_selecionados)
@@ -1102,16 +1267,26 @@ def main() -> None:
         df_status_municipio = _filtrar_por_meses(df_status_municipio, meses=meses_selecionados)
         df_internacoes_mensal = _filtrar_por_meses(df_internacoes_mensal, meses=meses_selecionados)
         df_unidade_mensal = _filtrar_por_meses(df_unidade_mensal, meses=meses_selecionados)
+        df_perfil_demografico_mensal = _filtrar_por_meses(df_perfil_demografico_mensal, meses=meses_selecionados)
+        df_comorbidades_mensal = _filtrar_por_meses(df_comorbidades_mensal, meses=meses_selecionados)
+        df_perfil_demografico_rj = _filtrar_por_meses(df_perfil_demografico_rj, meses=meses_selecionados)
+        df_perfil_demografico_br = _filtrar_por_meses(df_perfil_demografico_br, meses=meses_selecionados)
+        df_clinico_exames = _filtrar_por_meses(df_clinico_exames, meses=meses_selecionados)
 
-        df_mes_filtrado = _aplicar_periodo_rapido(df_mes_filtrado, periodo_rapido=periodo_rapido)
-        df_municipio_rj_filtrado = _aplicar_periodo_rapido(df_municipio_rj_filtrado, periodo_rapido=periodo_rapido)
-        df_municipio_br_filtrado = _aplicar_periodo_rapido(df_municipio_br_filtrado, periodo_rapido=periodo_rapido)
-        df_mes_municipio = _aplicar_periodo_rapido(df_mes_municipio, periodo_rapido=periodo_rapido)
-        df_status_municipio = _aplicar_periodo_rapido(df_status_municipio, periodo_rapido=periodo_rapido)
-        df_internacoes_mensal = _aplicar_periodo_rapido(df_internacoes_mensal, periodo_rapido=periodo_rapido)
-        df_unidade_mensal = _aplicar_periodo_rapido(df_unidade_mensal, periodo_rapido=periodo_rapido)
+        df_mes_filtrado = _aplicar_período_rapido(df_mes_filtrado, período_rapido=período_rapido)
+        df_municipio_rj_filtrado = _aplicar_período_rapido(df_municipio_rj_filtrado, período_rapido=período_rapido)
+        df_municipio_br_filtrado = _aplicar_período_rapido(df_municipio_br_filtrado, período_rapido=período_rapido)
+        df_mes_municipio = _aplicar_período_rapido(df_mes_municipio, período_rapido=período_rapido)
+        df_status_municipio = _aplicar_período_rapido(df_status_municipio, período_rapido=período_rapido)
+        df_internacoes_mensal = _aplicar_período_rapido(df_internacoes_mensal, período_rapido=período_rapido)
+        df_unidade_mensal = _aplicar_período_rapido(df_unidade_mensal, período_rapido=período_rapido)
+        df_perfil_demografico_mensal = _aplicar_período_rapido(df_perfil_demografico_mensal, período_rapido=período_rapido)
+        df_comorbidades_mensal = _aplicar_período_rapido(df_comorbidades_mensal, período_rapido=período_rapido)
+        df_perfil_demografico_rj = _aplicar_período_rapido(df_perfil_demografico_rj, período_rapido=período_rapido)
+        df_perfil_demografico_br = _aplicar_período_rapido(df_perfil_demografico_br, período_rapido=período_rapido)
+        df_clinico_exames = _aplicar_período_rapido(df_clinico_exames, período_rapido=período_rapido)
 
-        if secao == "Situacao Geral":
+        if secao == "Situação Geral":
             _render_dashboard_situacao_geral(
                 df_mes_filtrado=df_mes_filtrado,
                 df_municipio_rj_filtrado=df_municipio_rj_filtrado,
@@ -1124,13 +1299,13 @@ def main() -> None:
                 df_perfil_top=df_perfil_top,
                 semana_epi_media=semana_epi_media,
                 comparacao=comparacao,
-                periodo_rapido=periodo_rapido,
+                período_rapido=período_rapido,
                 metrica_visual=metrica_visual,
                 municipio_foco=municipio_foco,
                 top_n=int(filtros["top_n"]),
                 pop_refs=pop_refs,
             )
-        elif secao == "Territorio e Risco":
+        elif secao == "Território e Risco":
             render_territorio_risco_unidades(
                 df_unidade_mensal=df_unidade_mensal,
                 top_n=int(filtros["top_n"]),
@@ -1140,28 +1315,23 @@ def main() -> None:
                 df_municipio_br_filtrado=df_municipio_br_filtrado,
             )
         elif secao == "Perfil dos Casos":
-            st.markdown("### Perfil dos Casos")
-            has_sexo_col = "cs_sexo" in fato_columns or "sexo" in fato_columns
-            has_unidade_col = "id_unidade" in fato_columns
-            if not has_sexo_col:
-                st.warning("Campo `CS_SEXO`/`sexo` ainda nao existe em `saude.fato_dengue_casos`; grafico por sexo ficara vazio ate carga completa.")
-            elif df_sexo_municipio.empty:
-                st.info("Coluna de sexo encontrada, mas nao houve registros para o recorte/filtros atuais.")
-            if not has_unidade_col:
-                st.warning("Campo `ID_UNIDADE`/`id_unidade` ainda nao existe em `saude.fato_dengue_casos`; grafico de unidades notificadoras ficara vazio ate carga completa.")
-            elif df_unidade_municipio.empty:
-                st.info("Coluna de unidade notificadora encontrada, mas nao houve registros para o recorte/filtros atuais.")
-            render_sexo_chart(df_sexo=df_sexo_municipio)
-            render_unidade_notificadora_chart(df_unidade=df_unidade_municipio)
-        elif secao == "Clinico e Exames":
-            st.markdown("### Clinico e Exames")
-            st.warning("Dependente de carga completa dos campos clinicos/laboratoriais no fato operacional.")
+            render_perfil_epidemiologico(
+                df_perfil_mensal=df_perfil_demografico_mensal,
+                df_comorb_mensal=df_comorbidades_mensal,
+                comparacao=comparacao,
+                df_perfil_rj=df_perfil_demografico_rj,
+                df_perfil_br=df_perfil_demografico_br,
+                df_clinico=df_clinico_exames,
+            )
+        elif secao == "Clínico e Exames":
+            render_clinico_exames_dashboard(df_clinico=df_clinico_exames)
         else:
-            st.markdown("### Avaliacao")
+            st.markdown("### Avaliação")
             st.warning("Dependente de colunas de datas clinicas e encerramento para calculo final dos tempos.")
 
         _render_portal_footer()
         st.session_state["last_filter_signature"] = current_signature
+        st.session_state["last_rendered_secao"] = secao
         # Libera a interface ao usuario antes do pre-aquecimento em segundo plano.
         _finish_loading_overlay(loading)
         loading = None
@@ -1182,7 +1352,7 @@ def main() -> None:
             )
     except Exception as exc:
         st.error(
-            "Nao foi possivel concluir o carregamento do painel. "
+            "Não foi possível concluir o carregamento do painel. "
             "Se o problema persistir, recarregue a pagina com F5."
         )
         st.info("Dica: pressione F5 para tentar novamente.")

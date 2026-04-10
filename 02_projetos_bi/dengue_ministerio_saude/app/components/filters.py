@@ -6,11 +6,11 @@ import streamlit as st
 
 
 def render_filters_sidebar(
-    anos_disponiveis: list[int],
-    meses_disponiveis: list[int],
-    municipios_disponiveis: list[str],
+    anos_disponíveis: list[int],
+    meses_disponíveis: list[int],
+    municipios_disponíveis: list[str],
 ) -> dict[str, list | int | str]:
-    """Renderiza filtros globais com persistencia na sessao."""
+    """Renderiza filtros globais com persistência na sessão."""
     meses_nomes = {
         1: "Jan",
         2: "Fev",
@@ -27,16 +27,16 @@ def render_filters_sidebar(
     }
 
     defaults = {
-        "filtro_secao": "Situacao Geral",
+        "filtro_secao": "Situação Geral",
         "filtro_comparacao": "Rio das Ostras",
         "filtro_anos": [],
         "filtro_meses": [],
         "filtro_classificacao": [],
-        "filtro_periodo_rapido": "Ultimos 3 meses",
+        "filtro_período_rapido": "Últimos 3 meses",
         "filtro_uf": "RJ",
-        "filtro_municipio": ("Rio das Ostras" if "Rio das Ostras" in municipios_disponiveis else (municipios_disponiveis[0] if municipios_disponiveis else "")),
+        "filtro_municipio": ("Rio das Ostras" if "Rio das Ostras" in municipios_disponíveis else (municipios_disponíveis[0] if municipios_disponíveis else "")),
         "filtro_top_n": 10,
-        "filtro_carregar_historico_completo": False,
+        "filtro_carregar_histórico_completo": False,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -47,74 +47,74 @@ def render_filters_sidebar(
         st.session_state["filtro_meses"] = []
         st.session_state["filtro_comparacao"] = defaults["filtro_comparacao"]
         st.session_state["filtro_classificacao"] = defaults["filtro_classificacao"]
-        st.session_state["filtro_periodo_rapido"] = defaults["filtro_periodo_rapido"]
+        st.session_state["filtro_período_rapido"] = defaults["filtro_período_rapido"]
         st.session_state["filtro_uf"] = defaults["filtro_uf"]
         st.session_state["filtro_municipio"] = defaults["filtro_municipio"]
         st.session_state["filtro_top_n"] = defaults["filtro_top_n"]
-        st.session_state["filtro_carregar_historico_completo"] = defaults["filtro_carregar_historico_completo"]
+        st.session_state["filtro_carregar_histórico_completo"] = defaults["filtro_carregar_histórico_completo"]
 
-    # Regra de UX: se houver anos selecionados, periodo deve ser personalizado.
+    # Regra de UX: se houver anos selecionados, período deve ser personalizado.
     anos_preselecionados = st.session_state.get("filtro_anos", [])
     if anos_preselecionados:
-        st.session_state["filtro_periodo_rapido"] = "Personalizado (ano/mes)"
+        st.session_state["filtro_período_rapido"] = "Personalizado (ano/mês)"
 
     st.sidebar.header("Filtros")
-    periodo_rapido = st.sidebar.selectbox(
-        "Periodo",
+    período_rapido = st.sidebar.selectbox(
+        "Período",
         options=[
-            "Personalizado (ano/mes)",
-            "Ultimos 3 meses",
-            "Ultimos 6 meses",
-            "Ultimos 12 meses",
+            "Personalizado (ano/mês)",
+            "Últimos 3 meses",
+            "Últimos 6 meses",
+            "Últimos 12 meses",
             "Ano atual",
         ],
-        key="filtro_periodo_rapido",
+        key="filtro_período_rapido",
     )
     comparacao = st.sidebar.selectbox(
-        "Comparacao territorial",
+        "Comparação territorial",
         options=["Rio das Ostras", "Rio das Ostras x RJ x Brasil", "Rio das Ostras x RJ", "Rio das Ostras x Brasil"],
         key="filtro_comparacao",
     )
     metrica_visual = "Casos totais"
-    # Escopo fixo do painel (sem filtro de selecao)
+    # Escopo fixo do painel (sem filtro de seleção)
     st.session_state["filtro_uf"] = "RJ"
     st.session_state["filtro_municipio"] = "Rio das Ostras"
     uf = st.session_state["filtro_uf"]
     municipio = st.session_state["filtro_municipio"]
     st.sidebar.markdown("**Estado:** Rio de Janeiro (RJ)")
-    st.sidebar.markdown("**Municipio:** Rio das Ostras")
+    st.sidebar.markdown("**Município:** Rio das Ostras")
 
-    ano_atual = max(anos_disponiveis) if anos_disponiveis else None
-    anos_recentes = [a for a in anos_disponiveis if ano_atual is not None and a >= (ano_atual - 4)]
-    carregar_historico_completo = st.sidebar.checkbox(
-        "Carregar historico completo (mais lento)",
-        key="filtro_carregar_historico_completo",
-        help="Quando desmarcado, o filtro de ano mostra apenas os ultimos 5 anos para navegacao mais rapida.",
+    ano_atual = max(anos_disponíveis) if anos_disponíveis else None
+    anos_recentes = [a for a in anos_disponíveis if ano_atual is not None and a >= (ano_atual - 4)]
+    carregar_histórico_completo = st.sidebar.checkbox(
+        "Carregar histórico completo (mais lento)",
+        key="filtro_carregar_histórico_completo",
+        help="Quando desmarcado, o filtro de ano mostra apenas os últimos 5 anos para navegação mais rápida.",
     )
-    anos_options = anos_disponiveis if carregar_historico_completo else anos_recentes
+    anos_options = anos_disponíveis if carregar_histórico_completo else anos_recentes
     anos_options = sorted(anos_options, reverse=True)
     st.session_state["filtro_anos"] = [a for a in st.session_state.get("filtro_anos", []) if a in anos_options]
     anos = st.sidebar.multiselect(
         "Ano",
         options=anos_options,
         key="filtro_anos",
-        help="Selecione um ou mais anos. Ao selecionar, o periodo muda automaticamente para Personalizado (ano/mes).",
+        help="Selecione um ou mais anos. Ao selecionar, o período muda automaticamente para Personalizado (ano/mês).",
     )
-    meses_options = [m for m in range(1, 13) if m in meses_disponiveis]
+    meses_options = [m for m in range(1, 13) if m in meses_disponíveis]
     meses = st.sidebar.multiselect(
-        "Mes",
+        "Mês",
         options=meses_options,
         format_func=lambda m: f"{m:02d} - {meses_nomes.get(m, str(m))}",
         key="filtro_meses",
         help="Se vazio, considera todos os meses.",
     )
-    if periodo_rapido == "Personalizado (ano/mes)":
+    if período_rapido == "Personalizado (ano/mês)":
         if not anos:
-            st.sidebar.warning("No modo Personalizado (ano/mes), selecione pelo menos 1 ano. O mes e opcional.")
+            st.sidebar.warning("No modo Personalizado (ano/mês), selecione pelo menos 1 ano. O mês é opcional.")
         else:
-            st.sidebar.caption("Modo Personalizado: ano obrigatorio selecionado; mes opcional.")
+            st.sidebar.caption("Modo Personalizado: ano obrigatório selecionado; mês opcional.")
             st.sidebar.info(
-                "Consulta historica sob demanda: esse modo pode demorar um pouco mais para carregar."
+                "Consulta histórica sob demanda: esse modo pode demorar um pouco mais para carregar."
             )
     classificacao_opcoes = {
         "1": "Confirmado (1)",
@@ -125,27 +125,27 @@ def render_filters_sidebar(
         "12": "Dengue grave (12)",
     }
     classificacao = st.sidebar.multiselect(
-        "Classificacao do caso",
+        "Classificação do caso",
         options=list(classificacao_opcoes.keys()),
         default=st.session_state["filtro_classificacao"],
         format_func=lambda c: classificacao_opcoes.get(c, c),
         key="filtro_classificacao",
-        help="Se vazio, considera todas as classificacoes.",
+        help="Se vazio, considera todas as classificações.",
     )
-    top_n = st.sidebar.slider("Top municipios", min_value=5, max_value=30, step=1, key="filtro_top_n")
+    top_n = st.sidebar.slider("Top municípios", min_value=5, max_value=30, step=1, key="filtro_top_n")
 
-    st.sidebar.button("Limpar filtros", on_click=_clear_filters, width="stretch")
+    st.sidebar.button("Limpar filtros", on_click=_clear_filters, use_container_width=True)
 
     resumo_meses = "todos" if not meses else ", ".join([f"{m:02d}" for m in meses])
     st.sidebar.caption(
-        "Resumo filtros ativos | "
+        "Resumo de filtros ativos | "
         f"anos={anos if anos else 'todos'} | "
         f"meses={resumo_meses} | "
-        f"periodo={periodo_rapido} | "
+        f"período={período_rapido} | "
         f"uf={uf} | municipio={municipio} | "
-        f"classificacao={classificacao if classificacao else 'todas'} | "
-        f"comparacao={comparacao} | "
-        f"historico={'completo' if carregar_historico_completo else 'ultimos 5 anos'}"
+        f"classificação={classificacao if classificacao else 'todas'} | "
+        f"comparação={comparacao} | "
+        f"histórico={'completo' if carregar_histórico_completo else 'últimos 5 anos'}"
     )
 
     stage = int(st.session_state.get("preload_stage", 0))
@@ -161,16 +161,16 @@ def render_filters_sidebar(
     st.sidebar.progress(progress)
     st.sidebar.caption(stage_labels.get(stage, "Inicializando cache"))
     if stage < 3:
-        st.sidebar.caption("Aquecimento automatico em andamento... nao precisa clicar para atualizar.")
+        st.sidebar.caption("Aquecimento automático em andamento... não precisa clicar para atualizar.")
     else:
-        st.sidebar.caption("Cache ate 5 anos concluido.")
-    if carregar_historico_completo:
-        st.sidebar.caption("Historico completo: carregamento sob demanda (mais lento).")
+        st.sidebar.caption("Cache até 5 anos concluído.")
+    if carregar_histórico_completo:
+        st.sidebar.caption("Histórico completo: carregamento sob demanda (mais lento).")
 
     return {
         "secao": st.session_state.get("filtro_secao", defaults["filtro_secao"]),
         "comparacao": comparacao,
-        "periodo_rapido": periodo_rapido,
+        "período_rapido": período_rapido,
         "metrica_visual": metrica_visual,
         "uf": uf,
         "municipio": municipio,
@@ -178,6 +178,6 @@ def render_filters_sidebar(
         "meses": meses,
         "classificacao": classificacao,
         "top_n": top_n,
-        "carregar_historico_completo": carregar_historico_completo,
-        "personalizado_valido": (periodo_rapido != "Personalizado (ano/mes)") or bool(anos),
+        "carregar_histórico_completo": carregar_histórico_completo,
+        "personalizado_valido": (período_rapido != "Personalizado (ano/mês)") or bool(anos),
     }

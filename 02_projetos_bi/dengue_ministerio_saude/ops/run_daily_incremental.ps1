@@ -2,12 +2,17 @@ $ErrorActionPreference = "Continue"
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $pythonExe = Join-Path $projectRoot ".venv\Scripts\python.exe"
+$checkScript = Join-Path $projectRoot "run_check_campos_criticos.py"
 $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
 $logDir = Join-Path $projectRoot "logs\ops"
 $logFile = Join-Path $logDir "daily_incremental_$timestamp.log"
+$checkCsv = Join-Path $logDir "check_campos_criticos_rio_das_ostras_$timestamp.csv"
 
 if (!(Test-Path $pythonExe)) {
     throw "Python da venv nao encontrado em: $pythonExe"
+}
+if (!(Test-Path $checkScript)) {
+    throw "Script de check nao encontrado em: $checkScript"
 }
 
 if (!(Test-Path $logDir)) {
@@ -68,6 +73,26 @@ try {
         -LogFile $logFile
     if ($exitCode -ne 0) {
         throw "Falha no backfill (exit code: $exitCode)"
+    }
+
+    # 3) Check unico de campos criticos e exportacao CSV para auditoria.
+    $exitCode = Invoke-PythonCommand -PythonExe $pythonExe `
+        -Arguments "run_check_campos_criticos.py --municipio ""Rio das Ostras"" --uf RJ --output-csv ""$checkCsv""" `
+        -LogFile $logFile
+    if ($exitCode -ne 0) {
+        throw "Falha no check de campos criticos (exit code: $exitCode)"
+    }
+    "[$(Get-Date -Format s)] Check de campos criticos concluido: $checkCsv" | Tee-Object -FilePath $logFile -Append
+
+    if (Test-Path $checkCsv) {
+        $checkRows = Import-Csv -Path $checkCsv
+        $okCount = ($checkRows | Where-Object { $_.status -eq "OK" } | Measure-Object).Count
+        $pendingCount = ($checkRows | Where-Object { $_.status -ne "OK" } | Measure-Object).Count
+        $totalCount = ($checkRows | Measure-Object).Count
+        "[$(Get-Date -Format s)] Resumo check campos criticos: total=$totalCount ok=$okCount pendente=$pendingCount" | Tee-Object -FilePath $logFile -Append
+    }
+    else {
+        "[$(Get-Date -Format s)] Aviso: CSV do check nao encontrado para resumo ($checkCsv)." | Tee-Object -FilePath $logFile -Append
     }
 
     "[$(Get-Date -Format s)] Fim execucao diaria incremental (sucesso)" | Tee-Object -FilePath $logFile -Append
