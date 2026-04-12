@@ -9,7 +9,86 @@ from src.banco.database import get_engine
 
 def garantir_colunas_fato_dengue(schema: str = "saude", table_name: str = "fato_dengue_casos") -> None:
     """Garante colunas adicionais da fato usadas no BI."""
+    raw_date_cols = [
+        "dt_alrm",
+        "dt_digita",
+        "dt_grav",
+        "dt_invest",
+        "dt_notific",
+        "dt_obito",
+    ]
+    raw_text_cols = [
+        "tp_not",
+        "id_agravo",
+        "sem_not",
+        "nu_ano",
+        "sg_uf_not",
+        "id_municip",
+        "id_regiona",
+        "ano_nasc",
+        "sem_pri",
+        "sg_uf",
+        "id_mn_resi",
+        "id_rg_resi",
+        "id_pais",
+        "id_ocupa_n",
+        "tpautocto",
+        "coufinf",
+        "copaisinf",
+        "comuninf",
+        "classi_fin",
+        "criterio",
+        "doenca_tra",
+        "clinc_chik",
+        "evolucao",
+        "alrm_hipot",
+        "alrm_plaq",
+        "alrm_vom",
+        "alrm_sang",
+        "alrm_hemat",
+        "alrm_abdom",
+        "alrm_letar",
+        "alrm_hepat",
+        "alrm_liq",
+        "grav_pulso",
+        "grav_conv",
+        "grav_ench",
+        "grav_insuf",
+        "grav_taqui",
+        "grav_extre",
+        "grav_hipot",
+        "grav_hemat",
+        "grav_melen",
+        "grav_metro",
+        "grav_sang",
+        "grav_ast",
+        "grav_mioc",
+        "grav_consc",
+        "grav_orgao",
+        "mani_hemor",
+        "epistaxe",
+        "gengivo",
+        "metro",
+        "petequias",
+        "hematura",
+        "sangram",
+        "laco_n",
+        "plasmatico",
+        "evidencia",
+        "plaq_menor",
+        "con_fhd",
+        "complica",
+        "tp_sistema",
+        "nduplic_n",
+        "cs_flxret",
+        "flxrecebi",
+        "migrado_w",
+        "resul_pcr",
+    ]
+
     stmts = [
+        f"ALTER TABLE {schema}.{table_name} ADD COLUMN IF NOT EXISTS dt_sin_pri DATE",
+        f"ALTER TABLE {schema}.{table_name} ADD COLUMN IF NOT EXISTS dt_encerra DATE",
         f"ALTER TABLE {schema}.{table_name} ADD COLUMN IF NOT EXISTS cs_sexo VARCHAR(1)",
         f"ALTER TABLE {schema}.{table_name} ADD COLUMN IF NOT EXISTS nu_idade_n VARCHAR(8)",
         f"ALTER TABLE {schema}.{table_name} ADD COLUMN IF NOT EXISTS cs_gestant VARCHAR(2)",
@@ -57,6 +136,12 @@ def garantir_colunas_fato_dengue(schema: str = "saude", table_name: str = "fato_
         f"ALTER TABLE {schema}.{table_name} ADD COLUMN IF NOT EXISTS acido_pept VARCHAR(1)",
         f"ALTER TABLE {schema}.{table_name} ADD COLUMN IF NOT EXISTS auto_imune VARCHAR(1)",
     ]
+    stmts.extend(
+        [f"ALTER TABLE {schema}.{table_name} ADD COLUMN IF NOT EXISTS {col} DATE" for col in raw_date_cols]
+    )
+    stmts.extend(
+        [f"ALTER TABLE {schema}.{table_name} ADD COLUMN IF NOT EXISTS {col} VARCHAR(40)" for col in raw_text_cols]
+    )
     with get_engine().begin() as conn:
         for stmt in stmts:
             conn.execute(text(stmt))

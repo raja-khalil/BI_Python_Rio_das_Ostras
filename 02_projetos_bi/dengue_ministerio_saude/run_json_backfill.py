@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import date
+from itertools import chain
 from pathlib import Path
 
 from src.banco.loaders import carregar_dataframe_postgres, deletar_por_intervalo_data
@@ -73,6 +74,17 @@ def main() -> None:
         logger.info("Processando arquivo %s (ano=%s)", file_path, year)
 
         try:
+            # Protecao contra corrida/remoção externa:
+            # so remove dados do ano apos validar que o JSON abre e entrega primeiro chunk.
+            if not file_path.exists():
+                raise FileNotFoundError(f"Arquivo nao encontrado antes da leitura: {file_path}")
+
+            chunk_iter = iter_json_chunks(path=file_path, chunk_size=args.chunk_size)
+            try:
+                first_chunk = next(chunk_iter)
+            except StopIteration:
+                first_chunk = None
+
             if not args.skip_delete_year and year not in years_processed:
                 deleted = deletar_por_intervalo_data(
                     schema=settings.db_schema,
@@ -85,7 +97,13 @@ def main() -> None:
                 logger.info("Registros removidos para recarga do ano %s: %s", year, deleted)
 
             file_rows = 0
-            for raw_chunk in iter_json_chunks(path=file_path, chunk_size=args.chunk_size):
+            # Processa primeiro chunk validado e depois segue iterador restante.
+            chunks_to_process = chain(
+                [first_chunk] if first_chunk is not None else [],
+                chunk_iter,
+            )
+
+            for raw_chunk in chunks_to_process:
                 if raw_chunk.empty:
                     continue
 

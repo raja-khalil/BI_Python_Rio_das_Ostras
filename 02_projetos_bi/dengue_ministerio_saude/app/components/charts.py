@@ -86,7 +86,7 @@ def _to_month_séries(df: pd.DataFrame, label: str, value_col: str) -> pd.DataFr
 
 
 def _ensure_last_n_months(serie: pd.DataFrame, n_months: int) -> pd.DataFrame:
-    """Garante janela exata dos uUltimos N meses para cada serie/escopo."""
+    """Garante janela exata dos Ãºltimos N meses para cada sÃ©rie/escopo."""
     if serie.empty or n_months <= 0:
         return serie
     ref = pd.to_datetime(serie["mes_referencia"], errors="coerce").max()
@@ -615,7 +615,7 @@ def render_territorio_risco_unidades(
 
     cards_territorio = [
         _build_text_focus_card(
-            "Unidade com maior pressao (período filtrado)",
+            "Unidade com maior pressÃ£o (período filtrado)",
             str(unidade_pressao["unidade_label"]),
             int(unidade_pressao["casos_período"]),
         ),
@@ -626,7 +626,7 @@ def render_territorio_risco_unidades(
             f"{mes_inicio.strftime('%m/%Y')} -> {mes_fim.strftime('%m/%Y')} | crescimento (%)",
         ),
         _build_text_focus_card(
-            "Prioridade de acao (score de risco)",
+            "Prioridade de aÃ§Ã£o (score de risco)",
             f"{unidade_risco['classificacao_risco']} | {unidade_risco['unidade_label']}",
             int(round(float(unidade_risco["score_risco"]) * 100)),
             "Score de risco",
@@ -688,7 +688,7 @@ def render_territorio_risco_unidades(
             "score_risco": "Score de risco",
         }
     )
-    st.markdown("#### Prioridade de acao por unidade")
+    st.markdown("#### Prioridade de aÃ§Ã£o por unidade")
     st.dataframe(
         tabela[
             [
@@ -706,8 +706,8 @@ def render_territorio_risco_unidades(
     )
 
     # Comparação territorial (aplica filtro "Comparação territorial" tambem no painel 2).
-    st.markdown("#### Contexto territorial (filtro de comparacao)")
-    st.caption(f"Comparacao ativa: {comparacao}")
+    st.markdown("#### Contexto territorial (filtro de comparaÃ§Ã£o)")
+    st.caption(f"ComparaÃ§Ã£o ativa: {comparacao}")
 
     foco_norm = str(municipio_foco).strip().casefold()
 
@@ -739,7 +739,7 @@ def render_territorio_risco_unidades(
             render_kpi_cards(
                 [
                     make_card(
-                        f"Posicao de {municipio_foco} ({escopo})",
+                        f"PosiÃ§Ã£o de {municipio_foco} ({escopo})",
                         posicao,
                         "Ranking por casos no período filtrado",
                     )
@@ -782,7 +782,7 @@ def render_territorio_risco_unidades(
     if comparacao in {"Rio das Ostras x Brasil", "Rio das Ostras x RJ x Brasil"}:
         _render_contexto(df_municipio_br_filtrado if df_municipio_br_filtrado is not None else pd.DataFrame(), "Brasil")
 
-    # Comparacao direta com outro municipio do estado (RJ).
+    # ComparaÃ§Ã£o direta com outro municÃ­pio do estado (RJ).
     if df_municipio_rj_filtrado is not None and not df_municipio_rj_filtrado.empty:
         st.markdown("#### Comparacao com outro municipio do estado (RJ)")
         base_cmp = df_municipio_rj_filtrado.copy()
@@ -806,7 +806,7 @@ def render_territorio_risco_unidades(
             .sort_values("mes_referencia")
         )
         if serie_cmp.empty:
-            st.info("Sem dado informado para a comparacao selecionada.")
+            st.info("Sem dado informado para a comparaÃ§Ã£o selecionada.")
             return
         serie_cmp["total_casos"] = _as_int(serie_cmp["total_casos"])
 
@@ -839,7 +839,7 @@ def render_territorio_risco_unidades(
                 make_card(
                     f"Casos no período ({cidade_cmp})",
                     total_cmp,
-                    "Comparacao direta no recorte filtrado",
+                    "ComparaÃ§Ã£o direta no recorte filtrado",
                     delta_pct=float(cresc_cmp) if cresc_cmp is not None else None,
                 ),
             ]
@@ -854,7 +854,7 @@ def render_territorio_risco_unidades(
                 municipio_foco: COLOR_ACCENT,
                 cidade_cmp: COLOR_NEUTRAL,
             },
-            title=f"Evoluuo mensal: {municipio_foco} x {cidade_cmp}",
+            title=f"EvoluÃ§Ã£o mensal: {municipio_foco} x {cidade_cmp}",
         )
         fig_cmp.update_traces(
             mode="lines+markers",
@@ -923,7 +923,7 @@ def render_perfil_epidemiologico(
     faixa_total["taxa_intern"] = np.where(faixa_total["total_casos"] > 0, faixa_total["internacoes"] / faixa_total["total_casos"], 0.0)
     risco_top = faixa_total.sort_values("taxa_intern", ascending=False).iloc[0] if not faixa_total.empty else None
 
-    # Idade media aproximada por ponto medio da faixa etaria.
+    # Idade mÃ©dia aproximada por ponto mÃ©dio da faixa etÃ¡ria.
     faixa_total["mid"] = faixa_total["faixa_etaria"].astype(str).map(faixa_mid)
     denom = float(faixa_total[faixa_total["mid"].notna()]["total_casos"].sum())
     idade_media = (
@@ -943,7 +943,7 @@ def render_perfil_epidemiologico(
         return f"{int(round(float(v)))}%"
 
     cards = [
-        make_card("Idade media", int(round(idade_media)) if idade_media is not None else None, "anos (estimativa por faixa)"),
+        make_card("Idade mÃ©dia", int(round(idade_media)) if idade_media is not None else None, "anos (estimativa por faixa)"),
         make_card(
             "Grupo mais afetado",
             int(faixa_top["total_casos"]) if faixa_top is not None else None,
@@ -963,12 +963,12 @@ def render_perfil_epidemiologico(
             ),
         ),
         make_card(
-            "Grupo de maior risco (internacao)",
+            "Grupo de maior risco (internaÃ§Ã£o)",
             int(round((float(risco_top['taxa_intern']) * 100.0))) if risco_top is not None else None,
-            (f"{risco_top['faixa_etaria']} | taxa de internacao" if risco_top is not None else "Sem dado informado"),
+            (f"{risco_top['faixa_etaria']} | taxa de internaÃ§Ã£o" if risco_top is not None else "Sem dado informado"),
             suffix="%",
         ),
-        make_card("Comorbidades (frequencia)", int(round(comorb_pct)) if comorb_pct is not None else None, "Percentual relativo no período", suffix="%"),
+        make_card("Comorbidades (frequÃªncia)", int(round(comorb_pct)) if comorb_pct is not None else None, "Percentual relativo no período", suffix="%"),
     ]
     render_kpi_cards(cards)
 
@@ -984,7 +984,7 @@ def render_perfil_epidemiologico(
         customdata=np.where(total_casos > 0, (faixa_bar["total_casos"] / total_casos) * 100.0, 0.0),
         hovertemplate="<b>%{y}</b><br>Casos: %{x:,.0f}<br>Percentual: %{customdata:,.0f}%<extra></extra>",
     )
-    fig_faixa.update_layout(title="Distribuição de casos por faixa etaria", plot_bgcolor=SURFACE_BG, paper_bgcolor=SURFACE_BG, margin={"l": 12, "r": 12, "t": 52, "b": 12})
+    fig_faixa.update_layout(title="Distribuição de casos por faixa etÃ¡ria", plot_bgcolor=SURFACE_BG, paper_bgcolor=SURFACE_BG, margin={"l": 12, "r": 12, "t": 52, "b": 12})
     y_cfg_fx = _adaptive_yaxis(faixa_bar["total_casos"], pad=0.08)
     fig_faixa.update_xaxes(title="", gridcolor=GRID_SOFT, type="linear", range=y_cfg_fx["range"])
     fig_faixa.update_yaxes(title="")
@@ -1028,7 +1028,7 @@ def render_perfil_epidemiologico(
     fig_grav = go.Figure()
     fig_grav.add_bar(name="Internações", x=grav["faixa_etaria"].astype(str), y=grav["internacoes"], marker_color=COLOR_ACCENT, hovertemplate="<b>%{x}</b><br>Internações: %{y:,.0f}<extra></extra>")
     fig_grav.add_bar(name="Óbitos", x=grav["faixa_etaria"].astype(str), y=grav["obitos"], marker_color="#C73E3E", hovertemplate="<b>%{x}</b><br>Óbitos: %{y:,.0f}<extra></extra>")
-    fig_grav.update_layout(barmode="stack", title="Internações e Óbitos por faixa etaria", plot_bgcolor=SURFACE_BG, paper_bgcolor=SURFACE_BG, margin={"l": 12, "r": 12, "t": 52, "b": 12}, legend_title_text="")
+    fig_grav.update_layout(barmode="stack", title="Internações e Óbitos por faixa etÃ¡ria", plot_bgcolor=SURFACE_BG, paper_bgcolor=SURFACE_BG, margin={"l": 12, "r": 12, "t": 52, "b": 12}, legend_title_text="")
     st.plotly_chart(fig_grav, width="stretch")
 
     # B6 Comorbidades
@@ -1140,10 +1140,10 @@ def render_perfil_epidemiologico(
     if len(comp_parts) <= 1:
         return
 
-    st.markdown("#### Comparacao de perfil (Rio das Ostras x escopos selecionados)")
+    st.markdown("#### ComparaÃ§Ã£o de perfil (Rio das Ostras x escopos selecionados)")
     comp_df = pd.concat(comp_parts, ignore_index=True)
 
-    # Comparacao por faixa etaria (%)
+    # Comparacao por faixa etÃ¡ria (%)
     faixa_cmp = comp_df.groupby(["escopo", "faixa_etaria"], as_index=False)["total_casos"].sum()
     total_escopo = faixa_cmp.groupby("escopo", as_index=False)["total_casos"].sum().rename(columns={"total_casos": "total_escopo"})
     faixa_cmp = faixa_cmp.merge(total_escopo, on="escopo", how="left")
@@ -1157,7 +1157,7 @@ def render_perfil_epidemiologico(
         y="pct",
         color="escopo",
         barmode="group",
-        title="Comparacao por faixa etaria (% dos casos)",
+        title="ComparaÃ§Ã£o por faixa etÃ¡ria (% dos casos)",
         color_discrete_map={"Rio das Ostras": COLOR_ACCENT, "RJ": COLOR_NEUTRAL, "Brasil": BRAND_BLUE},
     )
     fig_cmp_faixa.update_traces(hovertemplate="<b>%{fullData.name}</b><br>Faixa: %{x}<br>Percentual: %{y:,.0f}%<extra></extra>")
@@ -1165,7 +1165,7 @@ def render_perfil_epidemiologico(
     fig_cmp_faixa.update_xaxes(title="", categoryorder="array", categoryarray=faixa_order)
     fig_cmp_faixa.update_yaxes(title="", gridcolor=GRID_SOFT, type="linear", range=[0, max(100, float(faixa_cmp["pct"].max() * 1.15))])
 
-    # Comparacao por sexo (%)
+    # ComparaÃ§Ã£o por sexo (%)
     sexo_cmp = comp_df.groupby(["escopo", "sexo_label"], as_index=False)["total_casos"].sum()
     total_escopo_s = sexo_cmp.groupby("escopo", as_index=False)["total_casos"].sum().rename(columns={"total_casos": "total_escopo"})
     sexo_cmp = sexo_cmp.merge(total_escopo_s, on="escopo", how="left")
@@ -1176,7 +1176,7 @@ def render_perfil_epidemiologico(
         y="pct",
         color="escopo",
         barmode="group",
-        title="Comparacao por sexo (% dos casos)",
+        title="ComparaÃ§Ã£o por sexo (% dos casos)",
         color_discrete_map={"Rio das Ostras": COLOR_ACCENT, "RJ": COLOR_NEUTRAL, "Brasil": BRAND_BLUE},
     )
     fig_cmp_sexo.update_traces(hovertemplate="<b>%{fullData.name}</b><br>Sexo: %{x}<br>Percentual: %{y:,.0f}%<extra></extra>")
@@ -1396,13 +1396,13 @@ def render_clinico_exames_dashboard(df_clinico: pd.DataFrame) -> None:
             f"{int(round(float(sint_top['pct'])))}% dos casos" if sint_top is not None else None,
         ),
         _build_text_focus_card(
-            "Padrao clinico tipico",
+            "PadrÃ£o clÃ­nico tÃ­pico",
             str(combo_top["padrao_combo"]) if combo_top is not None else "Sem dado informado",
             int(combo_top["size"]) if combo_top is not None else None,
             None,
         ),
         make_card("Exames realizados", int(round(float(pct_exam))) if pct_exam is not None else None, "Percentual de casos com exame", suffix="%"),
-        make_card("Taxa de positividade", int(round(float(positividade))) if positividade is not None else None, "Confirmacao laboratorial", suffix="%"),
+        make_card("Taxa de positividade", int(round(float(positividade))) if positividade is not None else None, "ConfirmaÃ§Ã£o laboratorial", suffix="%"),
         make_card("Casos sem exame", int(round(float(pct_sem_exam))) if pct_sem_exam is not None else None, "Percentual sem testagem", suffix="%"),
     ]
     render_kpi_cards(cards)
@@ -1428,7 +1428,7 @@ def render_clinico_exames_dashboard(df_clinico: pd.DataFrame) -> None:
 
     # Bloco 3 - combinacoes
     if combo_counts.empty:
-        st.info("Combinacoes de sintomas: Sem dado informado")
+        st.info("CombinaÃ§Ãµes de sintomas: Sem dado informado")
     else:
         top_combo = combo_counts.head(10).sort_values("size", ascending=True)
         fig_combo = px.bar(
@@ -1436,7 +1436,7 @@ def render_clinico_exames_dashboard(df_clinico: pd.DataFrame) -> None:
             x="size",
             y="padrao_combo",
             orientation="h",
-            title="Combinacoes de sintomas mais comuns",
+            title="CombinaÃ§Ãµes de sintomas mais comuns",
             color_discrete_sequence=[COLOR_NEUTRAL],
         )
         fig_combo.update_traces(hovertemplate="<b>%{y}</b><br>Casos: %{x:,.0f}<extra></extra>")
@@ -1572,7 +1572,7 @@ def render_clinico_exames_dashboard(df_clinico: pd.DataFrame) -> None:
 
     # Bloco 7 - evolucao exames no tempo
     if not exam_cols:
-        st.info("Evoluuo da realizacao de exames: Sem dado informado")
+        st.info("EvoluÃ§Ã£o da realizaÃ§Ã£o de exames: Sem dado informado")
     else:
         tmp = base.copy()
         exame_realizado = pd.Series(False, index=tmp.index)
@@ -1589,7 +1589,7 @@ def render_clinico_exames_dashboard(df_clinico: pd.DataFrame) -> None:
             evo,
             x="mes_referencia",
             y="pct",
-            title="Evoluuo da realizacao de exames ao longo do tempo",
+            title="EvoluÃ§Ã£o da realizaÃ§Ã£o de exames ao longo do tempo",
             color_discrete_sequence=[BRAND_BLUE],
         )
         fig_evo.update_traces(mode="lines+markers", hovertemplate="Período: %{x|%b/%Y}<br>Percentual: %{y:,.0f}%<extra></extra>")
@@ -1621,7 +1621,7 @@ def render_clinico_exames_dashboard(df_clinico: pd.DataFrame) -> None:
         names="classificacao",
         values="casos",
         hole=0.58,
-        title="Classificação dos casos apos investigação",
+        title="Classificação dos casos apÃ³s investigação",
         color="classificacao",
         color_discrete_map={
             "Confirmados": BRAND_BLUE,
@@ -1741,3 +1741,193 @@ def render_year_comparison(df_mes_municipio: pd.DataFrame, metrica_coluna: str, 
     y_cfg = _adaptive_yaxis(base["valor"], pad=0.06)
     fig.update_yaxes(title="", gridcolor=GRID_SOFT, type="linear", range=y_cfg["range"])
     st.plotly_chart(fig, width="stretch")
+
+
+def render_avaliacao_dashboard(df_avaliacao: pd.DataFrame, top_n: int = 10) -> None:
+    """Painel 5 - Avaliação e eficiência com títulos curtos e diretos."""
+    if df_avaliacao is None or df_avaliacao.empty:
+        st.info("Sem dado informado")
+        return
+
+    base = df_avaliacao.copy()
+    for col in ["data_notificacao", "dt_sin_pri", "dt_encerra", "dt_soro", "dt_ns1", "dt_viral", "dt_pcr"]:
+        if col in base.columns:
+            base[col] = pd.to_datetime(base[col], errors="coerce")
+
+    if "mes_referencia" not in base.columns and "data_notificacao" in base.columns:
+        base["mes_referencia"] = base["data_notificacao"].dt.to_period("M").dt.to_timestamp()
+
+    total = len(base)
+
+    tempo_notif = None
+    if {"dt_sin_pri", "data_notificacao"}.issubset(base.columns):
+        tmp = (base["data_notificacao"] - base["dt_sin_pri"]).dt.days
+        tmp = tmp[(tmp >= 0) & (tmp <= 180)]
+        if not tmp.empty:
+            tempo_notif = float(tmp.mean())
+
+    tempo_enc = None
+    if {"dt_encerra", "data_notificacao"}.issubset(base.columns):
+        tmp = (base["dt_encerra"] - base["data_notificacao"]).dt.days
+        tmp = tmp[(tmp >= 0) & (tmp <= 365)]
+        if not tmp.empty:
+            tempo_enc = float(tmp.mean())
+
+    encerrados_pct = None
+    if "dt_encerra" in base.columns and total > 0:
+        encerrados_pct = float(base["dt_encerra"].notna().mean() * 100.0)
+
+    exam_result_cols = [c for c in ["resul_soro", "resul_ns1", "resul_vi_n", "resul_pcr_"] if c in base.columns]
+    exam_date_cols = [c for c in ["dt_soro", "dt_ns1", "dt_viral", "dt_pcr"] if c in base.columns]
+
+    com_exame = pd.Series(False, index=base.index)
+    for c in exam_result_cols:
+        vals = base[c].astype(str).str.strip()
+        com_exame = com_exame | vals.isin(["1", "2", "3", "4"])
+    for c in exam_date_cols:
+        com_exame = com_exame | base[c].notna()
+
+    exame_pct = float(com_exame.mean() * 100.0) if total > 0 else None
+
+    campos_qualidade = [
+        c for c in ["dt_sin_pri", "dt_encerra", "classificacao_final", "evolucao_caso", "hospitaliz", "cs_sexo", "cs_raca", "cs_escol_n"]
+        if c in base.columns
+    ]
+    qualidade_pct = None
+    if campos_qualidade and total > 0:
+        preench = pd.Series(0.0, index=base.index)
+        for c in campos_qualidade:
+            s = base[c]
+            if pd.api.types.is_datetime64_any_dtype(s):
+                ok = s.notna()
+            else:
+                txt = s.astype(str).str.strip().str.upper()
+                ok = txt.ne("") & txt.ne("NI") & txt.ne("NULL") & txt.ne("NONE")
+            preench += ok.astype(float)
+        qualidade_pct = float((preench / len(campos_qualidade)).mean() * 100.0)
+
+    cards = [
+        make_card("Tempo até notificação", int(round(tempo_notif)) if tempo_notif is not None else None, "Média de dias (sintomas -> notificação)"),
+        make_card("Tempo até encerramento", int(round(tempo_enc)) if tempo_enc is not None else None, "Média de dias (notificação -> encerramento)"),
+        make_card("Casos encerrados", int(round(encerrados_pct)) if encerrados_pct is not None else None, "Percentual no período", suffix="%"),
+        make_card("Casos com exame", int(round(exame_pct)) if exame_pct is not None else None, "Percentual no período", suffix="%"),
+        make_card("Qualidade dos dados", int(round(qualidade_pct)) if qualidade_pct is not None else None, "Preenchimento médio dos campos críticos", suffix="%"),
+    ]
+    render_kpi_cards(cards)
+
+    if "mes_referencia" in base.columns and {"dt_sin_pri", "data_notificacao"}.issubset(base.columns):
+        s = base.copy()
+        s["dias_notif"] = (s["data_notificacao"] - s["dt_sin_pri"]).dt.days
+        s = s[(s["dias_notif"] >= 0) & (s["dias_notif"] <= 180)]
+        if not s.empty:
+            evo = s.groupby("mes_referencia", as_index=False)["dias_notif"].mean()
+            fig = px.line(evo, x="mes_referencia", y="dias_notif", title="Tempo médio até notificação", color_discrete_sequence=[BRAND_BLUE])
+            fig.update_traces(mode="lines+markers", hovertemplate="Período: %{x|%b/%Y}<br>Dias: %{y:,.0f}<extra></extra>")
+            y_cfg = _adaptive_yaxis(evo["dias_notif"], pad=0.15, min_value=1)
+            fig.update_xaxes(title="", gridcolor=GRID_SOFT, tickformat="%b/%Y", dtick="M1")
+            fig.update_yaxes(title="", gridcolor=GRID_SOFT, type="linear", range=y_cfg["range"])
+            fig.update_layout(plot_bgcolor=SURFACE_BG, paper_bgcolor=SURFACE_BG, margin={"l": 12, "r": 12, "t": 52, "b": 12})
+            st.plotly_chart(fig, width="stretch")
+        else:
+            st.info("Tempo médio até notificação: Sem dado informado")
+
+    if "mes_referencia" in base.columns and {"dt_encerra", "data_notificacao"}.issubset(base.columns):
+        s = base.copy()
+        s["dias_enc"] = (s["dt_encerra"] - s["data_notificacao"]).dt.days
+        s = s[(s["dias_enc"] >= 0) & (s["dias_enc"] <= 365)]
+        if not s.empty:
+            evo = s.groupby("mes_referencia", as_index=False)["dias_enc"].mean()
+            fig = px.line(evo, x="mes_referencia", y="dias_enc", title="Tempo médio até encerramento", color_discrete_sequence=[COLOR_NEUTRAL])
+            fig.update_traces(mode="lines+markers", hovertemplate="Período: %{x|%b/%Y}<br>Dias: %{y:,.0f}<extra></extra>")
+            y_cfg = _adaptive_yaxis(evo["dias_enc"], pad=0.15, min_value=1)
+            fig.update_xaxes(title="", gridcolor=GRID_SOFT, tickformat="%b/%Y", dtick="M1")
+            fig.update_yaxes(title="", gridcolor=GRID_SOFT, type="linear", range=y_cfg["range"])
+            fig.update_layout(plot_bgcolor=SURFACE_BG, paper_bgcolor=SURFACE_BG, margin={"l": 12, "r": 12, "t": 52, "b": 12})
+            st.plotly_chart(fig, width="stretch")
+        else:
+            st.info("Tempo médio até encerramento: Sem dado informado")
+
+    if {"dt_encerra", "data_notificacao"}.issubset(base.columns):
+        s = ((base["dt_encerra"] - base["data_notificacao"]).dt.days)
+        s = s[(s >= 0) & (s <= 365)]
+        if not s.empty:
+            bins = pd.cut(s, bins=[-1, 3, 7, 15, 9999], labels=["0-3", "4-7", "8-15", "+15"])
+            dist = bins.value_counts().rename_axis("faixa").reset_index(name="casos")
+            dist["faixa"] = pd.Categorical(dist["faixa"], categories=["0-3", "4-7", "8-15", "+15"], ordered=True)
+            dist = dist.sort_values("faixa")
+            fig = px.bar(dist, x="faixa", y="casos", title="Distribuição do tempo de encerramento", color_discrete_sequence=[COLOR_NEUTRAL])
+            fig.update_traces(hovertemplate="Faixa: %{x}<br>Casos: %{y:,.0f}<extra></extra>")
+            y_cfg = _adaptive_yaxis(dist["casos"], pad=0.12, min_value=1)
+            fig.update_xaxes(title="")
+            fig.update_yaxes(title="", gridcolor=GRID_SOFT, type="linear", range=y_cfg["range"])
+            fig.update_layout(plot_bgcolor=SURFACE_BG, paper_bgcolor=SURFACE_BG, margin={"l": 12, "r": 12, "t": 52, "b": 12})
+            st.plotly_chart(fig, width="stretch")
+        else:
+            st.info("Distribuição do tempo de encerramento: Sem dado informado")
+
+    if campos_qualidade:
+        rows = []
+        for c in campos_qualidade:
+            s = base[c]
+            if pd.api.types.is_datetime64_any_dtype(s):
+                miss = (~s.notna()).mean() * 100.0
+            else:
+                txt = s.astype(str).str.strip().str.upper()
+                miss = (txt.eq("") | txt.eq("NI") | txt.eq("NULL") | txt.eq("NONE")).mean() * 100.0
+            rows.append({"campo": c, "incompleto": float(miss)})
+        inc = pd.DataFrame(rows).sort_values("incompleto", ascending=False).head(10)
+        fig = px.bar(inc.sort_values("incompleto", ascending=True), x="incompleto", y="campo", orientation="h", title="Campos com maior incompletude", color_discrete_sequence=["#C73E3E"])
+        fig.update_traces(hovertemplate="Campo: %{y}<br>Incompleto: %{x:,.0f}%<extra></extra>")
+        y_cfg = _adaptive_yaxis(inc["incompleto"], pad=0.10, min_value=5)
+        fig.update_xaxes(title="", gridcolor=GRID_SOFT, type="linear", range=y_cfg["range"])
+        fig.update_yaxes(title="")
+        fig.update_layout(plot_bgcolor=SURFACE_BG, paper_bgcolor=SURFACE_BG, margin={"l": 12, "r": 12, "t": 52, "b": 12})
+        st.plotly_chart(fig, width="stretch")
+
+    if "mes_referencia" in base.columns:
+        evo = base.groupby("mes_referencia", as_index=False).agg(total=("mes_referencia", "size"))
+        evo["com_exame"] = base.groupby("mes_referencia").apply(lambda g: int(com_exame.loc[g.index].sum())).values
+        evo["sem_exame"] = evo["total"] - evo["com_exame"]
+        evl = evo.melt(id_vars="mes_referencia", value_vars=["com_exame", "sem_exame"], var_name="status", value_name="casos")
+        evl["status"] = evl["status"].map({"com_exame": "Com exame", "sem_exame": "Sem exame"})
+        fig = px.bar(evl, x="mes_referencia", y="casos", color="status", barmode="group", title="Casos com e sem exame no tempo", color_discrete_map={"Com exame": BRAND_BLUE, "Sem exame": "#9EB1C3"})
+        fig.update_traces(hovertemplate="Período: %{x|%b/%Y}<br>%{fullData.name}: %{y:,.0f}<extra></extra>")
+        y_cfg = _adaptive_yaxis(evl["casos"], pad=0.12, min_value=1)
+        fig.update_xaxes(title="", gridcolor=GRID_SOFT, tickformat="%b/%Y", dtick="M1")
+        fig.update_yaxes(title="", gridcolor=GRID_SOFT, type="linear", range=y_cfg["range"])
+        fig.update_layout(plot_bgcolor=SURFACE_BG, paper_bgcolor=SURFACE_BG, margin={"l": 12, "r": 12, "t": 52, "b": 12}, legend_title_text="")
+        st.plotly_chart(fig, width="stretch")
+
+    encerrados = int(base["dt_encerra"].notna().sum()) if "dt_encerra" in base.columns else 0
+    em_aberto = int(total - encerrados)
+    sit = pd.DataFrame({"situacao": ["Encerrados", "Em investigação"], "casos": [encerrados, em_aberto]})
+    fig = px.pie(sit, names="situacao", values="casos", hole=0.58, title="Situação dos casos", color="situacao", color_discrete_map={"Encerrados": BRAND_BLUE, "Em investigação": "#36566F"})
+    fig.update_traces(textinfo="percent", hovertemplate="<b>%{label}</b><br>Casos: %{value:,.0f}<extra></extra>")
+    fig.update_layout(plot_bgcolor=SURFACE_BG, paper_bgcolor=SURFACE_BG, margin={"l": 12, "r": 12, "t": 52, "b": 12}, legend_title_text="")
+    st.plotly_chart(fig, width="stretch")
+
+    if {"id_unidade", "dt_encerra", "data_notificacao"}.issubset(base.columns):
+        u = base.copy()
+        u["dias_enc"] = (u["dt_encerra"] - u["data_notificacao"]).dt.days
+        u = u[(u["dias_enc"] >= 0) & (u["dias_enc"] <= 365)]
+        if not u.empty:
+            unidade_col = "unidade_nome" if "unidade_nome" in u.columns else "id_unidade"
+            grp = u.groupby(unidade_col, as_index=False).agg(tempo_medio=("dias_enc", "mean"), casos=("dias_enc", "size"))
+            grp["tempo_medio"] = grp["tempo_medio"].round(1)
+            grp = grp.sort_values("tempo_medio", ascending=False).head(max(5, int(top_n)))
+            fig = px.bar(
+                grp.sort_values("tempo_medio", ascending=True),
+                x="tempo_medio",
+                y=unidade_col,
+                orientation="h",
+                title="Tempo médio de encerramento por unidade",
+                color_discrete_sequence=[COLOR_NEUTRAL],
+                custom_data=["casos"],
+            )
+            fig.update_traces(hovertemplate="Unidade: %{y}<br>Tempo médio: %{x:.1f} dia(s)<br>Casos: %{customdata[0]:,.0f}<extra></extra>")
+            y_cfg = _adaptive_yaxis(grp["tempo_medio"], pad=0.12, min_value=1)
+            fig.update_xaxes(title="", gridcolor=GRID_SOFT, type="linear", range=y_cfg["range"])
+            fig.update_yaxes(title="")
+            fig.update_layout(plot_bgcolor=SURFACE_BG, paper_bgcolor=SURFACE_BG, margin={"l": 12, "r": 12, "t": 52, "b": 12})
+            st.plotly_chart(fig, width="stretch")
+

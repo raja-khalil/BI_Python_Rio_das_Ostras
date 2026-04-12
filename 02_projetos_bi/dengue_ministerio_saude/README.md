@@ -216,14 +216,34 @@ Objetos principais:
 - `saude.fato_dengue_analitica` (view)
 - `saude.dim_territorio` (view)
 - `saude.agg_dengue_mensal` (tabela agregada)
+- `saude.mv_painel1_mes_uf_classif` (materialized view)
+- `saude.mv_painel1_2_mes_municipio_rj` (materialized view)
+- `saude.mv_painel2_mes_unidade_municipio_rj` (materialized view)
 
 ## Operacao de producao
 - `PIPELINE_MODE=historical`: executa carga historica completa por lotes de anos.
 - `PIPELINE_MODE=incremental`: executa carga incremental diaria com base em watermark no PostgreSQL.
 - Tabelas de metadados (criacao automatica): `saude.bi_pipeline_watermark` e `saude.bi_pipeline_execucoes`.
+- A rotina incremental (`ops/run_daily_incremental.ps1`) executa `run_build_analytics.py` apos o backfill para manter agregados e materialized views atualizados.
 - Parametros principais em `.env`:
   `HISTORICAL_START_YEAR`, `HISTORICAL_END_YEAR`, `HISTORICAL_BATCH_YEARS`,
   `INCREMENTAL_OVERLAP_DAYS`, `INCREMENTAL_FALLBACK_YEAR`.
+
+### Notificacao por email (SMTP institucional)
+- O runner `ops/run_daily_incremental.ps1` envia status ao final da execucao.
+- Suporta:
+  - SMTP autenticado (`BI_SMTP_AUTH=true`)
+  - SMTP relay sem autenticacao (`BI_SMTP_AUTH=false`)
+- Variaveis:
+  - `BI_NOTIFY_EMAIL=true`
+  - `BI_NOTIFY_TO=email1;email2`
+  - `BI_SMTP_HOST`, `BI_SMTP_PORT`, `BI_SMTP_USE_SSL`
+  - `BI_SMTP_AUTH`, `BI_SMTP_USER`, `BI_SMTP_PASS`
+  - `BI_MAIL_FROM`, `BI_MAIL_REPLYTO` (recomendado `no-reply@...`)
+- Teste rapido isolado:
+  ```bash
+  powershell.exe -ExecutionPolicy Bypass -File "ops/test_smtp.ps1"
+  ```
 
 ### Exemplos
 - Carga historica 2000-2026:
@@ -248,8 +268,15 @@ Este projeto foi estruturado para funcionar como modelo padrao para novos BIs do
 - Referencia: `docs/IDENTIDADE_VISUAL_PMRO.md`
 - Logos oficiais no projeto: `assets/branding/Logo_prefeitura-RO/`
 - Copia em base compartilhada: `../01_bases_compartilhadas/identidade_visual/Logo_prefeitura-RO/`
+- Manuais de marca (base compartilhada):
+  - `../01_bases_compartilhadas/identidade_visual/manuais_marca/manual-de-aplicacao-da-marca-rio-das-ostras.pdf`
+  - `../01_bases_compartilhadas/identidade_visual/manuais_marca/manual_marca_govtic.pdf`
+  - `../01_bases_compartilhadas/identidade_visual/manuais_marca/manual_marca_governo_digital.pdf`
 
 Paleta oficial aplicada no tema:
 - Azul: `#004F80`
 - Amarelo: `#DFA230`
 - Branco: `#FFFFFF`
+
+## Referencias de dados (MS)
+- Dicionario de dados Dengue (Ministerio da Saude): `docs/referencias/dicionario_dados_dengue_ms.pdf`

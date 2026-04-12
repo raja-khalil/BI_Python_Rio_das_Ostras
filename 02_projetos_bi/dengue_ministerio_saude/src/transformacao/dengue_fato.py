@@ -33,9 +33,11 @@ def preparar_fato_dengue(df: pd.DataFrame) -> pd.DataFrame:
     output["municipio"] = output["municipio"].fillna("NAO INFORMADO")
     output["uf"] = df.get("sg_uf_not", df.get("sg_uf", "")).astype("string").str[:2]
     output["data_notificacao"] = _to_date(df.get("dt_notific", pd.Series(index=df.index)))
+    output["dt_sin_pri"] = _to_date(df.get("dt_sin_pri", pd.Series(index=df.index)))
     output["semana_epidemiologica"] = _to_int(df.get("sem_not", pd.Series(index=df.index)))
     output["classificacao_final"] = df.get("classi_fin", pd.Series(index=df.index)).astype("string")
     output["evolucao_caso"] = df.get("evolucao", pd.Series(index=df.index)).astype("string")
+    output["dt_encerra"] = _to_date(df.get("dt_encerra", pd.Series(index=df.index)))
     output["cs_sexo"] = df.get("cs_sexo", pd.Series(index=df.index)).astype("string").str[:1]
     output["nu_idade_n"] = df.get("nu_idade_n", pd.Series(index=df.index)).astype("string").str[:8]
     output["cs_gestant"] = df.get("cs_gestant", pd.Series(index=df.index)).astype("string").str[:2]
@@ -88,5 +90,80 @@ def preparar_fato_dengue(df: pd.DataFrame) -> pd.DataFrame:
     output["hipertensa"] = df.get("hipertensa", pd.Series(index=df.index)).astype("string").str[:1]
     output["acido_pept"] = df.get("acido_pept", pd.Series(index=df.index)).astype("string").str[:1]
     output["auto_imune"] = df.get("auto_imune", pd.Series(index=df.index)).astype("string").str[:1]
+
+    # Estrutura completa do JSON (campos tecnicos adicionais para rastreabilidade SQL-first)
+    raw_date_cols = ["dt_alrm", "dt_digita", "dt_grav", "dt_invest", "dt_notific", "dt_obito"]
+    raw_text_cols = [
+        "tp_not",
+        "id_agravo",
+        "sem_not",
+        "nu_ano",
+        "sg_uf_not",
+        "id_municip",
+        "id_regiona",
+        "ano_nasc",
+        "sem_pri",
+        "sg_uf",
+        "id_mn_resi",
+        "id_rg_resi",
+        "id_pais",
+        "id_ocupa_n",
+        "tpautocto",
+        "coufinf",
+        "copaisinf",
+        "comuninf",
+        "classi_fin",
+        "criterio",
+        "doenca_tra",
+        "clinc_chik",
+        "evolucao",
+        "alrm_hipot",
+        "alrm_plaq",
+        "alrm_vom",
+        "alrm_sang",
+        "alrm_hemat",
+        "alrm_abdom",
+        "alrm_letar",
+        "alrm_hepat",
+        "alrm_liq",
+        "grav_pulso",
+        "grav_conv",
+        "grav_ench",
+        "grav_insuf",
+        "grav_taqui",
+        "grav_extre",
+        "grav_hipot",
+        "grav_hemat",
+        "grav_melen",
+        "grav_metro",
+        "grav_sang",
+        "grav_ast",
+        "grav_mioc",
+        "grav_consc",
+        "grav_orgao",
+        "mani_hemor",
+        "epistaxe",
+        "gengivo",
+        "metro",
+        "petequias",
+        "hematura",
+        "sangram",
+        "laco_n",
+        "plasmatico",
+        "evidencia",
+        "plaq_menor",
+        "con_fhd",
+        "complica",
+        "tp_sistema",
+        "nduplic_n",
+        "cs_flxret",
+        "flxrecebi",
+        "migrado_w",
+        "resul_pcr",
+    ]
+    for col in raw_date_cols:
+        output[col] = _to_date(df.get(col, pd.Series(index=df.index)))
+    for col in raw_text_cols:
+        output[col] = df.get(col, pd.Series(index=df.index)).astype("string").str[:40]
 
     return output

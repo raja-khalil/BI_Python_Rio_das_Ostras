@@ -13,6 +13,7 @@ from app.business_rules import TARGET_MUNICIPIO_NOME, TARGET_UF_CODIGO, TARGET_U
 from app.components.cards import make_card, render_kpi_cards
 from app.components.charts import (
     render_classification_donut,
+    render_avaliacao_dashboard,
     render_clinico_exames_dashboard,
     render_perfil_epidemiologico,
     render_rankings,
@@ -29,6 +30,7 @@ from app.data_access import (
     load_casos_mes_municipio,
     load_casos_mes_uf,
     load_casos_municipio_ano_rj_enriquecido,
+    load_avaliacao_registros_municipio,
     load_internacoes_mensal_municipio,
     load_populacao_refs,
     load_perfil_demografico_mensal_municipio,
@@ -647,7 +649,7 @@ def _start_date_for_fast_window(
     if período_rapido == "Ano atual":
         return date(ref_ts.year, 1, 1).isoformat()
 
-    # Personalizado: se no houver ano selecionado, carrega apenas uUltimos 5 anos por padrao.
+    # Personalizado: se nÃ£o houver ano selecionado, carrega apenas Ãºltimos 5 anos por padrÃ£o.
     if anos_selecionados:
         return date(min(anos_selecionados), 1, 1).isoformat()
     if carregar_histórico_completo:
@@ -1033,7 +1035,7 @@ def _render_dashboard_situacao_geral(
                 _build_text_focus_card("Unidade que mais notificou", (unidade_top_nome or "Sem dado informado"), unidade_top_casos),
                 _build_text_focus_card("Sexo mais notificado", (sexo_top_nome or "Sem dado informado"), sexo_top_casos),
                 _build_text_focus_card("Idade mais notificada", idade_top_txt, idade_top_casos),
-                _build_text_focus_card("Gestante (situacao mais frequente)", gest_top_txt, gest_top_casos),
+                _build_text_focus_card("Gestante (situaÃ§Ã£o mais frequente)", gest_top_txt, gest_top_casos),
                 _build_text_focus_card("Raca/Cor mais notificada", raca_top_txt, raca_top_casos),
                 _build_text_focus_card("Escolaridade mais notificada", esc_top_txt, esc_top_casos),
             ]
@@ -1160,7 +1162,7 @@ def main() -> None:
         )
         step += 1
         _update_loading_overlay(
-            loading, step, total_steps, "Atualizando classificacao de casos...", started_at=started_at
+            loading, step, total_steps, "Atualizando classificaÃ§Ã£o de casos...", started_at=started_at
         )
 
         df_internacoes_mensal = load_internacoes_mensal_municipio(
@@ -1200,6 +1202,11 @@ def main() -> None:
             data_inicio=data_inicio,
         )
         df_clinico_exames = load_clinico_exames_registros_municipio(
+            municipio_nome=municipio_foco,
+            classificacoes=classificacao_tuple,
+            data_inicio=data_inicio,
+        )
+        df_avaliacao = load_avaliacao_registros_municipio(
             municipio_nome=municipio_foco,
             classificacoes=classificacao_tuple,
             data_inicio=data_inicio,
@@ -1272,6 +1279,7 @@ def main() -> None:
         df_perfil_demografico_rj = _filtrar_por_meses(df_perfil_demografico_rj, meses=meses_selecionados)
         df_perfil_demografico_br = _filtrar_por_meses(df_perfil_demografico_br, meses=meses_selecionados)
         df_clinico_exames = _filtrar_por_meses(df_clinico_exames, meses=meses_selecionados)
+        df_avaliacao = _filtrar_por_meses(df_avaliacao, meses=meses_selecionados)
 
         df_mes_filtrado = _aplicar_período_rapido(df_mes_filtrado, período_rapido=período_rapido)
         df_municipio_rj_filtrado = _aplicar_período_rapido(df_municipio_rj_filtrado, período_rapido=período_rapido)
@@ -1327,7 +1335,10 @@ def main() -> None:
             render_clinico_exames_dashboard(df_clinico=df_clinico_exames)
         else:
             st.markdown("### Avaliação")
-            st.warning("Dependente de colunas de datas clinicas e encerramento para calculo final dos tempos.")
+            render_avaliacao_dashboard(
+                df_avaliacao=df_avaliacao,
+                top_n=int(filtros["top_n"]),
+            )
 
         _render_portal_footer()
         st.session_state["last_filter_signature"] = current_signature

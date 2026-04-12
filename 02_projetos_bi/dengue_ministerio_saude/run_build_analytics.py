@@ -29,6 +29,7 @@ def main() -> None:
         ddl_dir / "005_dim_ibge_municipio.sql",
         ddl_dir / "006_modelo_analitico.sql",
         ddl_dir / "007_agg_dengue_mensal.sql",
+        ddl_dir / "014_materialized_views_painel_1_2.sql",
     ]
 
     for file in ordered_files:
@@ -37,8 +38,14 @@ def main() -> None:
         logger.info("Aplicando DDL: %s", file.name)
         _run_sql_file(file)
 
+    try:
+        with get_engine().begin() as conn:
+            conn.execute(text("SELECT saude.refresh_agg_dengue_mensal()"))
+    except Exception as exc:
+        logger.warning("Falha ao atualizar agg_dengue_mensal (seguindo com MVs): %s", exc)
+
     with get_engine().begin() as conn:
-        conn.execute(text("SELECT saude.refresh_agg_dengue_mensal()"))
+        conn.execute(text("SELECT saude.refresh_mvs_painel_1_2()"))
 
     logger.info("Camada analitica atualizada com sucesso.")
 
