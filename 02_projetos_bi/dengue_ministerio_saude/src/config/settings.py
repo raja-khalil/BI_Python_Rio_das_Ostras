@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 import os
+from urllib.parse import quote
 
 from dotenv import load_dotenv
 
@@ -55,8 +56,10 @@ class Settings:
     @property
     def sqlalchemy_database_url(self) -> str:
         """Retorna URL SQLAlchemy usando driver psycopg."""
+        db_user = quote(self.db_user, safe="")
+        db_password = quote(self.db_password, safe="")
         return (
-            f"postgresql+psycopg://{self.db_user}:{self.db_password}"
+            f"postgresql+psycopg://{db_user}:{db_password}"
             f"@{self.db_host}:{self.db_port}/{self.db_name}"
         )
 

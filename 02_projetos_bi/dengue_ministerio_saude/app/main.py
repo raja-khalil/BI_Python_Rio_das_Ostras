@@ -489,7 +489,7 @@ def _inject_mobile_first_styles() -> None:
 
 
 def _render_portal_header() -> str:
-    """Cabecalho institucional do painel oficial com navegacao global."""
+    """Cabeçalho institucional do painel oficial com navegação global."""
     logo_path = Path("assets/branding/Logo_prefeitura-RO/Logo_PMRO.png")
     logo_uri = _image_data_uri(logo_path)
     govtic_path = Path("assets/branding/parceiros/logo_govtic.png")
@@ -542,11 +542,11 @@ def _render_portal_header() -> str:
 
 
 def _render_portal_footer() -> None:
-    """Rodape com fontes oficiais utilizadas no painel."""
+    """Rodapé com fontes oficiais utilizadas no painel."""
     with st.container(border=True):
         with st.expander("Fontes de dados", expanded=False):
             st.caption(
-                "Ministerio da Saude (SINAN - Dengue): "
+                "Ministério da Saúde (SINAN - Dengue): "
                 "https://dadosabertos.saude.gov.br/dataset/arboviroses-dengue"
             )
             st.caption(
@@ -554,12 +554,12 @@ def _render_portal_footer() -> None:
                 "https://cnes.datasus.gov.br/pages/downloads/arquivosBaseDados.jsp"
             )
             st.caption("IBGE (Base territorial e populacional): acervo interno da Prefeitura, origem Censo 2022 / IBGE.")
-            st.caption("Manual da marca Prefeitura de Rio das Ostras: arquivo institucional interno (PDF de referencia visual).")
-            st.caption("Ambiente analitico local: PostgreSQL schema `saude`.")
+            st.caption("Manual da marca Prefeitura de Rio das Ostras: arquivo institucional interno (PDF de referência visual).")
+            st.caption("Ambiente analítico local: PostgreSQL schema `saude`.")
 
 
 def _render_top_menu(show_title: bool = True) -> str:
-    """Navegacao principal em botoes no cabecalho."""
+    """Navegação principal em botões no cabeçalho."""
     options = [
         "Situação Geral",
         "Território e Risco",
@@ -571,7 +571,7 @@ def _render_top_menu(show_title: bool = True) -> str:
         st.markdown("##### Menu")
     if hasattr(st, "segmented_control"):
         selected = st.segmented_control(
-            "Secao do painel",
+            "Seção do painel",
             options=options,
             key="filtro_secao",
             label_visibility="collapsed",
@@ -579,7 +579,7 @@ def _render_top_menu(show_title: bool = True) -> str:
         )
         return selected or st.session_state.get("filtro_secao", "Situação Geral")
     selected = st.radio(
-        "Secao do painel",
+        "Seção do painel",
         options=options,
         key="filtro_secao",
         horizontal=True,
@@ -649,7 +649,7 @@ def _start_date_for_fast_window(
     if período_rapido == "Ano atual":
         return date(ref_ts.year, 1, 1).isoformat()
 
-    # Personalizado: se nÃ£o houver ano selecionado, carrega apenas Ãºltimos 5 anos por padrÃ£o.
+    # Personalizado: se não houver ano selecionado, carrega apenas últimos 5 anos por padrão.
     if anos_selecionados:
         return date(min(anos_selecionados), 1, 1).isoformat()
     if carregar_histórico_completo:
@@ -1035,7 +1035,7 @@ def _render_dashboard_situacao_geral(
                 _build_text_focus_card("Unidade que mais notificou", (unidade_top_nome or "Sem dado informado"), unidade_top_casos),
                 _build_text_focus_card("Sexo mais notificado", (sexo_top_nome or "Sem dado informado"), sexo_top_casos),
                 _build_text_focus_card("Idade mais notificada", idade_top_txt, idade_top_casos),
-                _build_text_focus_card("Gestante (situaÃ§Ã£o mais frequente)", gest_top_txt, gest_top_casos),
+                _build_text_focus_card("Gestante (situação mais frequente)", gest_top_txt, gest_top_casos),
                 _build_text_focus_card("Raca/Cor mais notificada", raca_top_txt, raca_top_casos),
                 _build_text_focus_card("Escolaridade mais notificada", esc_top_txt, esc_top_casos),
             ]
@@ -1162,7 +1162,7 @@ def main() -> None:
         )
         step += 1
         _update_loading_overlay(
-            loading, step, total_steps, "Atualizando classificaÃ§Ã£o de casos...", started_at=started_at
+            loading, step, total_steps, "Atualizando classificação de casos...", started_at=started_at
         )
 
         df_internacoes_mensal = load_internacoes_mensal_municipio(

@@ -876,7 +876,7 @@ def load_casos_municipio_ano_rj_enriquecido(
                     EXTRACT(YEAR FROM f.data_notificacao)::INTEGER AS ano,
                     DATE_TRUNC('month', f.data_notificacao)::DATE AS mes_referencia,
                     COALESCE(NULLIF(TRIM(f.uf), ''), 'NI') AS uf,
-                    COALESCE(NULLIF(TRIM(f.municipio), ''), 'Municipio nao informado') AS municipio_raw,
+                    COALESCE(NULLIF(TRIM(f.municipio), ''), 'Município não informado') AS municipio_raw,
                     COUNT(*)::BIGINT AS total_casos
                 FROM saude.fato_dengue_casos f
                 WHERE f.data_notificacao IS NOT NULL
@@ -947,7 +947,7 @@ def load_casos_municipio_ano_brasil_enriquecido(
                 EXTRACT(YEAR FROM f.data_notificacao)::INTEGER AS ano,
                 DATE_TRUNC('month', f.data_notificacao)::DATE AS mes_referencia,
                 COALESCE(NULLIF(TRIM(f.uf), ''), 'NI') AS uf,
-                COALESCE(NULLIF(TRIM(f.municipio), ''), 'Municipio nao informado') AS municipio_raw,
+                COALESCE(NULLIF(TRIM(f.municipio), ''), 'Município não informado') AS municipio_raw,
                 COUNT(*)::BIGINT AS total_casos
             FROM saude.fato_dengue_casos f
             WHERE f.data_notificacao IS NOT NULL
@@ -1100,7 +1100,7 @@ def load_perfil_demografico_mensal_municipio(
 
     faixa_expr = f"""
         CASE
-            WHEN ({idade_expr}) IS NULL THEN 'Nao informado'
+            WHEN ({idade_expr}) IS NULL THEN 'Não informado'
             WHEN ({idade_expr}) <= 9 THEN '0 a 9'
             WHEN ({idade_expr}) BETWEEN 10 AND 19 THEN '10 a 19'
             WHEN ({idade_expr}) BETWEEN 20 AND 39 THEN '20 a 39'
@@ -1314,7 +1314,7 @@ def load_perfil_demografico_mensal_escopo(
     )
     faixa_expr = f"""
         CASE
-            WHEN ({idade_expr}) IS NULL THEN 'Nao informado'
+            WHEN ({idade_expr}) IS NULL THEN 'Não informado'
             WHEN ({idade_expr}) <= 9 THEN '0 a 9'
             WHEN ({idade_expr}) BETWEEN 10 AND 19 THEN '10 a 19'
             WHEN ({idade_expr}) BETWEEN 20 AND 39 THEN '20 a 39'
@@ -1397,7 +1397,7 @@ def load_clinico_exames_registros_municipio(
     classificacoes: tuple[str, ...] = tuple(),
     data_inicio: str | None = None,
 ) -> pd.DataFrame:
-    """Registros clinicos/laboratoriais no municipio foco para montagem do painel clinico."""
+    """Registros clínicos/laboratoriais no município foco para montagem do painel clínico."""
     columns = load_fato_columns()
     base_cols = ["data_notificacao", "classificacao_final", "evolucao_caso", "hospitaliz", "dt_interna"]
     sintomas = [
